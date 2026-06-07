@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cost Saving & Material Analysis</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- ApexCharts -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.44.0/dist/apexcharts.min.js"></script>
+
+  <!-- SheetJS -->
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
+  <!-- jQuery (for Select2) -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <!-- Select2 -->
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['DM Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#1d4ed8',
+              700: '#1e3a8a',
+              800: '#1e3068',
+              900: '#0f172a',
+            },
+            cyan: {
+              400: '#22d3ee',
+              500: '#06b6d4',
+              600: '#0891b2',
+            },
+            saving: '#10b981',
+            loss: '#ef4444',
+            warning: '#f59e0b',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+    }
+
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f5f9; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+    /* ===== HEADER GRADIENT ===== */
+    .header-gradient {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 40%, #1d4ed8 70%, #0891b2 100%);
+    }
+
+    /* ===== GLASS CARD ===== */
+    .glass-card {
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.7);
+      box-shadow: 0 4px 24px rgba(30,58,138,0.08), 0 1px 4px rgba(30,58,138,0.04);
+      border-radius: 16px;
+      transition: box-shadow 0.25s ease, transform 0.25s ease;
+    }
+    .glass-card:hover {
+      box-shadow: 0 8px 32px rgba(30,58,138,0.13), 0 2px 8px rgba(30,58,138,0.06);
+      transform: translateY(-1px);
+    }
+
+    /* ===== KPI CARD ===== */
+    .kpi-card {
+      background: white;
+      border-radius: 14px;
+      padding: 16px 18px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(30,58,138,0.06);
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card:hover {
+      box-shadow: 0 6px 24px rgba(30,58,138,0.12);
+      transform: translateY(-2px);
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 14px 14px 0 0;
+    }
+    .kpi-card.blue::before { background: linear-gradient(90deg,#1d4ed8,#0891b2); }
+    .kpi-card.cyan::before { background: linear-gradient(90deg,#0891b2,#22d3ee); }
+    .kpi-card.green::before { background: linear-gradient(90deg,#10b981,#34d399); }
+    .kpi-card.red::before { background: linear-gradient(90deg,#ef4444,#f87171); }
+    .kpi-card.orange::before { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+
+    /* ===== FILTER CONTAINER ===== */
+    .filter-container {
+      background: white;
+      border-bottom: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(30,58,138,0.06);
+    }
+
+    /* ===== UPLOAD AREA ===== */
+    .upload-area {
+      border: 2px dashed #93c5fd;
+      border-radius: 12px;
+      background: #eff6ff;
+      transition: all 0.25s;
+      cursor: pointer;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      border-color: #1d4ed8;
+      background: #dbeafe;
+    }
+
+    /* ===== SECTION HEADER ===== */
+    .section-header {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e3a8a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .section-header::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: linear-gradient(90deg, #bfdbfe, transparent);
+      border-radius: 999px;
+    }
+
+    /* ===== TABLE ===== */
+    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .data-table th {
+      background: #f8fafc;
+      padding: 10px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid #e2e8f0;
+      position: sticky; top: 0; z-index: 1;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .data-table th:hover { background: #f1f5f9; color: #1d4ed8; }
+    .data-table td {
+      padding: 10px 14px;
+      font-size: 13px;
+      border-bottom: 1px solid #f1f5f9;
+      white-space: nowrap;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: #f8faff; }
+
+    /* ===== BADGE ===== */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge-green { background: #d1fae5; color: #065f46; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-bar {
+      height: 6px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    /* ===== ANIMATED COUNTER ===== */
+    .counter-val { transition: all 0.1s; }
+
+    /* ===== TOGGLE BUTTON ===== */
+    .toggle-btn {
+      padding: 5px 14px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #e2e8f0;
+      background: white;
+      color: #64748b;
+      transition: all 0.2s;
+    }
+    .toggle-btn.active {
+      background: #1d4ed8;
+      color: white;
+      border-color: #1d4ed8;
+    }
+
+    /* ===== LOADING SKELETON ===== */
+    .skeleton {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 60px 20px; color: #94a3b8; text-align: center;
+    }
+    .empty-state svg { width: 64px; height: 64px; margin-bottom: 16px; opacity: 0.4; }
+
+    /* ===== CATEGORY CARD ===== */
+    .category-card {
+      background: white;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 12px rgba(30,58,138,0.05);
+      overflow: hidden;
+      transition: all 0.25s;
+    }
+    .category-card:hover {
+      box-shadow: 0 8px 28px rgba(30,58,138,0.11);
+      transform: translateY(-2px);
+    }
+
+    /* ===== TOOLTIP ===== */
+    .apexcharts-tooltip {
+      border-radius: 10px !important;
+      box-shadow: 0 8px 24px rgba(30,58,138,0.15) !important;
+      border: 1px solid #e2e8f0 !important;
+    }
+
+    /* ===== RANK BADGE ===== */
+    .rank-badge {
+      width: 22px; height: 22px;
+      border-radius: 6px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .rank-1 { background: #fef3c7; color: #92400e; }
+    .rank-2 { background: #f1f5f9; color: #475569; }
+    .rank-3 { background: #fce7f3; color: #9d174d; }
+    .rank-n { background: #f1f5f9; color: #64748b; }
+
+    /* ===== NAV TAB ===== */
+    .nav-tab {
+      padding: 8px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #64748b;
+      border: 1px solid transparent;
+    }
+    .nav-tab.active {
+      background: white;
+      color: #1d4ed8;
+      border-color: #bfdbfe;
+      box-shadow: 0 2px 8px rgba(29,78,216,0.1);
+    }
+    .nav-tab:hover:not(.active) {
+      background: rgba(255,255,255,0.5);
+      color: #1e40af;
+    }
+
+    /* ===== GAUGE ===== */
+    #gauge-chart .apexcharts-radialbar-track { stroke: #f1f5f9; }
+
+    /* ===== TREEMAP ===== */
+    .apexcharts-treemap-rect { rx: 6; ry: 6; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 1024px) {
+      .grid-kpi { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .grid-kpi { grid-template-columns: 1fr; }
+      .hide-mobile { display: none; }
+    }
+
+    /* ===== FADE IN ANIMATION ===== */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeInUp 0.4s ease forwards; }
+    .fade-in-delay-1 { animation-delay: 0.05s; opacity: 0; }
+    .fade-in-delay-2 { animation-delay: 0.1s; opacity: 0; }
+    .fade-in-delay-3 { animation-delay: 0.15s; opacity: 0; }
+    .fade-in-delay-4 { animation-delay: 0.2s; opacity: 0; }
+
+    /* ===== SECTION CONTAINER ===== */
+    .section-container { display: none; }
+    .section-container.active { display: block; }
+
+    /* ===== STAT CHIP ===== */
+    .stat-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 8px; padding: 3px 10px;
+      font-size: 12px; font-weight: 500; color: #475569;
+    }
+
+    /* ========================================================= */
+    /* FILTER TOOLBAR */
+    /* ========================================================= */
+
+    .filter-toolbar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:14px;
+      align-items:flex-end;
+    }
+
+    .filter-group{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      width:180px;
+      min-width:180px;
+    }
+
+    .filter-group-wide{
+      width:180px;
+      min-width:180px;
+    }
+
+    /* ========================================================= */
+    /* LABEL */
+    /* ========================================================= */
+
+    .filter-label{
+      font-size:11px;
+      font-weight:700;
+      color:#64748b;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    /* ========================================================= */
+    /* SELECT2 */
+    /* ========================================================= */
+
+    .select2-container{
+      width:100% !important;
+    }
+
+    /* BOX */
+    .select2-container--default
+    .select2-selection--multiple{
+      min-height:44px !important;
+      height:44px !important;
+      border-radius:12px !important;
+      border:1px solid #cbd5e1 !important;
+      background:#fff !important;
+      display:flex !important;
+      align-items:center !important;
+      padding:0 12px !important;
+      overflow:hidden !important;
+      transition:.2s;
+    }
+
+    /* HOVER */
+    .select2-container--default
+    .select2-selection--multiple:hover{
+      border-color:#94a3b8 !important;
+    }
+
+    /* FOCUS */
+    .select2-container--default.select2-container--focus
+    .select2-selection--multiple{
+      border-color:#2563eb !important;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.12);
+    }
+
+    /* ========================================================= */
+    /* SEARCH INPUT */
+    /* ========================================================= */
+
+    .select2-container--default
+    .select2-search--inline
+    .select2-search__field{
+      margin-top:0 !important;
+      line-height:44px !important;
+      font-size:13px !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+    }
+
+    /* Custom placeholder via CSS counter trick */
+    .select2-container--default
+    .select2-selection--multiple
+    .select2-selection__rendered{
+      display:flex !important;
+      align-items:center !important;
+      width:100% !important;
+      padding:0 !important;
+      font-size:13px !important;
+      font-family: 'Plus Jakarta Sans', sans-serif !important;
+      color:#64748b;
+    }
+
+    .select2-container--default
+    .select2-selection--multiple
+    .select2-selection__rendered::before{
+      content: attr(data-count);
+      font-size:13px;
+      color:#64748b;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      pointer-events:none;
+    }
+
+    /* DROPDOWN */
+    .select2-dropdown{
+      border-radius:12px !important;
+      border:1px solid #e2e8f0 !important;
+      box-shadow: 0 8px 24px rgba(30,58,138,0.12) !important;
+      overflow:hidden;
+    }
+
+    .select2-results__option{
+      padding:10px 14px !important;
+      font-size:13px;
+      display:flex;
+      align-items:center;
+    }
+
+    /* ========================================================= */
+    /* CHECKBOX STYLE */
+    /* ========================================================= */
+
+    .select2-results__option::before{
+      content:'';
+      width:14px;
+      height:14px;
+      border-radius:4px;
+      border:1.5px solid #94a3b8;
+      margin-right:10px;
+      background:#fff;
+      flex-shrink:0;
+    }
+
+    .select2-results__option--selected::before{
+      background:#2563eb;
+      border-color:#2563eb;
+      box-shadow: inset 0 0 0 2px #fff;
+    }
+
+    /* ========================================================= */
+    /* SELECTED */
+    /* ========================================================= */
+
+    .select2-results__option--selected{
+      background:#eff6ff !important;
+      color:#1d4ed8 !important;
+      font-weight:600;
+    }
+
+    /* ========================================================= */
+    /* RESPONSIVE */
+    /* ========================================================= */
+
+    @media(max-width:768px){
+      .filter-group,
+      .filter-group-wide{
+        width:100%;
+        min-width:100%;
+      }
+    }
+
+    /* ===== TOP PART CHART scroll container ===== */
+    #chart-top-saving {
+      overflow-y: auto;
+      max-height: 560px;
+    }
+
+    /* ===== CATEGORY CARD part list scroll ===== */
+    .cat-part-list {
+      max-height: 340px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    /* ========================================================= */
+    /* FILTER COLLAPSE */
+    /* ========================================================= */
+
+    /* Tombol filter hidden di desktop */
+    .mobile-filter-header{
+      display:none;
+    }
+
+    /* Default desktop */
+    #filter-panel{
+      display:block;
+    }
+
+    /* ========================================================= */
+    /* TABLET + MOBILE */
+    /* ========================================================= */
+
+    @media (max-width:1200px){
+
+      /* tombol filter */
+      .mobile-filter-header{
+        display:block;
+        position:sticky;
+        top:0;
+        z-index:60;
+        background:#fff;
+        padding:10px;
+        border-bottom:1px solid #e2e8f0;
+        box-shadow:0 2px 10px rgba(0,0,0,.05);
+      }
+
+      .mobile-filter-header button{
+        width:100%;
+        height:42px;
+        border:none;
+        border-radius:10px;
+        background:#2563eb;
+        color:#fff;
+        font-weight:600;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:10px;
+        cursor:pointer;
+      }
+
+      /* panel disembunyikan */
+      #filter-panel{
+        display:none;
+      }
+
+      /* panel muncul saat tombol diklik */
+      #filter-panel.show{
+        display:block;
+        animation:slideDown .25s ease;
+      }
+
+      @keyframes slideDown{
+        from{
+          opacity:0;
+          transform:translateY(-10px);
+        }
+        to{
+          opacity:1;
+          transform:translateY(0);
+        }
+      }
+
+      /* ===================================================== */
+      /* PERTAHANKAN LAYOUT DESKTOP */
+      /* ===================================================== */
+
+      .filter-toolbar{
+        display:flex;
+        flex-wrap:wrap;
+        gap:14px;
+        align-items:flex-end;
+      }
+
+      .filter-group{
+        display:flex;
+        flex-direction:column;
+        gap:6px;
+        width:180px;
+        min-width:180px;
+      }
+
+      .filter-group-wide{
+        width:180px;
+        min-width:180px;
+      }
+
+      .select2-container{
+        width:100% !important;
+      }
+    }
+  </style>
+</head>
+
+<div
+    id="part-detail-modal"
+    class="hidden fixed inset-0 z-[9999] bg-slate-900/30 backdrop-blur-sm p-4">
+
+    <div
+        class="glass-card w-full h-full flex flex-col overflow-hidden">
+
+        <!-- HEADER -->
+
+        <div
+            class="
+                px-6
+                py-4
+                border-b
+                border-slate-200
+                bg-gradient-to-r
+                from-blue-50
+                to-cyan-50
+            ">
+
+            <div class="flex items-center justify-between">
+
+                <div>
+
+                    <h2
+                        id="part-detail-title"
+                        class="
+                            text-xl
+                            font-bold
+                            text-blue-900
+                        ">
+                    </h2>
+
+                    <div
+                        id="part-detail-subtitle"
+                        class="
+                            text-xs
+                            text-slate-500
+                            mt-1
+                        ">
+                    </div>
+
+                </div>
+
+                <button
+                    onclick="closePartDetail()"
+                    class="
+                        w-10
+                        h-10
+                        rounded-xl
+                        bg-white
+                        border
+                        border-slate-200
+                        hover:bg-slate-50
+                        transition
+                    ">
+                    ✕
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- BODY -->
+
+        <div
+            id="part-detail-body"
+            class="
+                flex-1
+                overflow-auto
+                p-6
+                bg-slate-50
+            ">
+
+        </div>
+
+    </div>
+
+</div>
+
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="header-gradient text-white relative overflow-hidden">
+  <div class="absolute inset-0 opacity-10">
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" stroke-width="0.5"/>
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#grid)" />
+    </svg>
+  </div>
+  <div class="absolute top-0 right-0 w-96 h-96 opacity-10" style="background: radial-gradient(circle, #22d3ee 0%, transparent 70%); transform: translate(30%, -30%);"></div>
+  <div class="absolute bottom-0 left-0 w-64 h-64 opacity-10" style="background: radial-gradient(circle, #3b82f6 0%, transparent 70%); transform: translate(-30%, 30%);"></div>
+
+  <div class="relative max-w-screen-2xl mx-auto px-6 py-5">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div class="flex items-center gap-4">
+        <!-- Logo / Icon -->
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center" style="background: rgba(255,255,255,0.15); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.2);">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="M9 12l2 2 4-4"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight leading-tight mt-0.5">Cost Saving & Material Analysis</h1>
+          <p class="text-xs mt-0.5" style="color: rgba(255,255,255,0.65);">Monitoring Cost Saving, NG & Material Usage</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-6">
+        <div class="text-right">
+          <div class="text-xs font-medium" style="color: rgba(255,255,255,0.55);">Data Loaded</div>
+          <div class="text-lg font-bold font-mono" id="header-total-rows">—</div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs font-medium" style="color: rgba(255,255,255,0.55);">Filtered Rows</div>
+          <div class="text-lg font-bold font-mono" id="header-filtered-rows">—</div>
+        </div>
+        <div class="text-right">
+          <div class="text-xs font-medium" style="color: rgba(255,255,255,0.55);">Last Update</div>
+          <div class="text-sm font-semibold" id="header-date">—</div>
+        </div>
+        <!-- Export Buttons -->
+        <div class="flex gap-2">
+          <button onclick="exportExcel()" class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold transition-all" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.12)'">
+            <i class="fas fa-file-excel text-green-400"></i> Export Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== FILTER AREA (STICKY) ===== -->
+<div class="mobile-filter-header">
+  <button id="filter-toggle-btn" onclick="toggleFilters()">
+    <i class="fas fa-filter"></i>
+    <span>Filter</span>
+    <i class="fas fa-chevron-down" id="filter-chevron"></i>
+  </button>
+</div>
+<div id="filter-panel" class="filter-container sticky top-0 z-50">
+  <div class="max-w-screen-2xl mx-auto px-6 py-3">
+    <div class="flex flex-wrap items-end gap-3">
+      <!-- Upload -->
+      <div class="flex-shrink-0">
+        <label class="filter-label">Upload File</label>
+        <div id="upload-area" class="upload-area px-4 py-2 flex items-center gap-2 cursor-pointer" style="min-width: 180px;" onclick="document.getElementById('file-input').click()">
+          <i class="fas fa-cloud-upload-alt text-blue-500 text-sm"></i>
+          <div>
+            <div id="upload-text" class="text-xs font-semibold text-blue-700">Klik atau drag Excel</div>
+            <div id="upload-info" class="text-xs text-blue-500"></div>
+          </div>
+          <!-- key: no value attr so browser always fires change -->
+          <input type="file" id="file-input" accept=".xlsx,.xls" class="hidden" />
+        </div>
+      </div>
+
+      <div class="filter-toolbar">
+
+        <!-- PERIODE (gabungan Bulan + Tahun) -->
+        <div class="filter-group filter-group-wide">
+          <label class="filter-label">Periode</label>
+          <select id="filter-periode"
+                  multiple
+                  class="filter-multi">
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Scenario</label>
+          <select id="filter-scenario"
+                  multiple
+                  class="filter-multi">
+            <option value="Standard">Standard</option>
+            <option value="Alternative">Alternative</option>
+          </select>
+        </div>
+
+        <div class="filter-group">
+          <label class="filter-label">Kategori Material</label>
+          <select id="filter-kategori"
+                  multiple
+                  class="filter-multi">
+          </select>
+        </div>
+
+        <div class="filter-group filter-group-wide">
+          <label class="filter-label">Part Name</label>
+          <select id="filter-part"
+                  multiple
+                  class="filter-multi">
+          </select>
+        </div>
+
+        <!-- NEW: Filter Material -->
+        <div class="filter-group filter-group-wide">
+          <label class="filter-label">Material</label>
+          <select id="filter-material"
+                  multiple
+                  class="filter-multi">
+          </select>
+        </div>
+      </div>
+
+      <!-- Reset -->
+      <div class="flex-shrink-0">
+        <label class="filter-label">&nbsp;</label>
+        <button onclick="resetFilters()" class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-all" style="height: 38px;">
+          <i class="fas fa-rotate-right"></i> Reset
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== NAVIGATION TABS ===== -->
+<div class="max-w-screen-2xl mx-auto px-6 pt-4">
+  <div class="flex gap-2 p-1.5 rounded-xl inline-flex" style="background: #e8edf5;">
+    <button class="nav-tab active" onclick="switchTab('overview')"><i class="fas fa-chart-pie mr-1.5"></i>Overview</button>
+    <button class="nav-tab" onclick="switchTab('category')"><i class="fas fa-layer-group mr-1.5"></i>Per Kategori</button>
+    <button class="nav-tab" onclick="switchTab('ng')"><i class="fas fa-triangle-exclamation mr-1.5"></i>NG Analysis</button>
+    <button class="nav-tab" onclick="switchTab('material')"><i class="fas fa-cubes mr-1.5"></i>Material Usage</button>
+  </div>
+</div>
+
+<!-- ===== MAIN CONTENT ===== -->
+<main class="max-w-screen-2xl mx-auto px-6 py-4 pb-10">
+
+  <!-- ====================== CONTAINER 2: OVERVIEW ====================== -->
+  <div id="tab-overview" class="section-container active">
+    <div class="grid grid-cols-12 gap-4">
+
+      <!-- KPI Cards (left) -->
+      <div class="col-span-12 lg:col-span-2">
+        <div class="grid grid-cols-1 gap-3" id="kpi-container">
+          <div class="kpi-card blue skeleton" style="height: 90px;"></div>
+          <div class="kpi-card cyan skeleton" style="height: 90px;"></div>
+          <div class="kpi-card green skeleton" style="height: 90px;"></div>
+          <div class="kpi-card orange skeleton" style="height: 90px;"></div>
+          <div class="kpi-card red skeleton" style="height: 90px;"></div>
+        </div>
+      </div>
+
+      <!-- Cost Comparison Chart (center) -->
+      <div class="col-span-12 lg:col-span-5">
+        <div class="glass-card p-4 h-full">
+          <div class="flex items-center justify-between mb-3">
+            <div class="section-header" style="margin-bottom:0;">
+              <i class="fas fa-chart-bar text-blue-600"></i> Cost Comparison
+            </div>
+            <div class="flex gap-1">
+              <button class="toggle-btn active" id="btn-comparison-nominal" onclick="toggleComparison('nominal')">Nominal</button>
+              <button class="toggle-btn" id="btn-comparison-pct" onclick="toggleComparison('pct')">%</button>
+            </div>
+          </div>
+          <div id="chart-comparison" style="min-height: 360px;">
+            <div class="skeleton" style="height:360px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top All Parts Chart (right) — no toggle buttons, scrollable -->
+      <div class="col-span-12 lg:col-span-5">
+        <div class="glass-card p-4 h-full">
+          <div id="chart-top-saving">
+            <div class="skeleton" style="height:360px;"></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <!-- ROW 2 -->
+
+    <div class="grid grid-cols-12 gap-4 mt-4">
+
+        <!-- ALL MATERIAL -->
+
+        <div class="col-span-12 lg:col-span-5">
+
+            <div class="glass-card p-4 h-full">
+
+                <div id="chart-top-material">
+
+                    <div
+                        class="skeleton"
+                        style="height:360px;">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- MONTHLY -->
+
+        <div class="col-span-12 lg:col-span-7">
+
+            <div class="glass-card p-4 h-full">
+
+                <div id="chart-monthly-saving">
+
+                    <div
+                        class="skeleton"
+                        style="height:360px;">
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+  </div>
+
+  <!-- ====================== CONTAINER 3: KATEGORI MATERIAL ====================== -->
+  <div id="tab-category" class="section-container">
+    <div class="flex items-center justify-between mb-4">
+      <div class="section-header" style="margin-bottom:0; font-size: 16px;">
+        <i class="fas fa-layer-group text-blue-600"></i> Saving Berdasarkan Kategori Material
+      </div>
+    </div>
+    <div id="category-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div class="skeleton" style="height: 200px; border-radius: 14px;"></div>
+      <div class="skeleton" style="height: 200px; border-radius: 14px;"></div>
+      <div class="skeleton" style="height: 200px; border-radius: 14px;"></div>
+    </div>
+  </div>
+
+  <!-- ====================== CONTAINER 4: NG ANALYSIS ====================== -->
+  <div id="tab-ng" class="section-container">
+    <div class="grid grid-cols-12 gap-4">
+      <!-- Top 10 NG Part -->
+      <div class="col-span-12 lg:col-span-6">
+        <div class="glass-card p-4" style="height:400px;">
+          <div class="section-header"><i class="fas fa-triangle-exclamation text-red-500"></i> Top 10 NG Part</div>
+          <div id="chart-ng-top"><div class="skeleton"></div></div>
+        </div>
+      </div>
+      <!-- NG Loss by Category -->
+      <div class="col-span-12 lg:col-span-3">
+        <div class="glass-card p-4" style="height:400px;">
+          <div class="section-header"><i class="fas fa-chart-pie text-orange-500"></i> NG Loss by Kategori</div>
+          <div id="chart-ng-donut"><div class="skeleton"></div></div>
+        </div>
+      </div>
+      <!-- NG Rate Gauge -->
+      <div class="col-span-12 lg:col-span-3">
+        <div class="glass-card p-4" style="height:400px;">
+          <div class="section-header"><i class="fas fa-gauge-high text-yellow-500"></i> NG Rate</div>
+          <div id="chart-ng-gauge"><div class="skeleton"></div></div>
+          <div id="ng-rate-label" class="text-center mt-1 font-mono text-2xl font-bold text-slate-700">—</div>
+        </div>
+      </div>
+
+      <!-- Worst Material Performance -->
+      <div class="col-span-12 lg:col-span-4">
+        <div class="glass-card p-4" style="height:440px;">
+          <div class="section-header"><i class="fas fa-skull text-red-500"></i> Worst Material Performance</div>
+          <div id="worst-material-list" class="space-y-2">
+            <div class="skeleton" style="height:60px; border-radius:10px;"></div>
+            <div class="skeleton" style="height:60px; border-radius:10px;"></div>
+            <div class="skeleton" style="height:60px; border-radius:10px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Detail NG Part Table -->
+      <div class="col-span-12 lg:col-span-8">
+        <div class="glass-card p-4" style="height:440px;">
+          <div class="flex items-center justify-between mb-3">
+            <div class="section-header" style="margin-bottom:0;"><i class="fas fa-table text-blue-600"></i> Detail NG Part</div>
+            <div class="flex gap-2 items-center">
+              <input type="text" id="ng-search" placeholder="Cari part..." class="filter-input" style="width: 160px; height: 32px; padding: 4px 10px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px;" oninput="renderNGTablePage(1)" />
+              <button onclick="exportNGTableCSV()" class="toggle-btn"><i class="fas fa-download mr-1"></i>CSV</button>
+            </div>
+          </div>
+          <div class="overflow-auto" style="max-height: 320px;">
+            <table class="data-table" id="ng-table">
+              <thead>
+                <tr>
+                  <th onclick="sortNGTable('part_name')">Part <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortNGTable('material')">Material <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortNGTable('qty_prod')">Qty Prod <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortNGTable('ng_prod')">NG <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortNGTable('ng_rate')">NG Rate <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortNGTable('ng_loss')">Total Loss <i class="fas fa-sort text-xs ml-1"></i></th>
+                </tr>
+              </thead>
+              <tbody id="ng-table-body">
+                <tr><td colspan="6" class="text-center py-8 text-slate-400">Upload file Excel terlebih dahulu</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="flex items-center justify-between mt-3" id="ng-pagination"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====================== CONTAINER 5: MATERIAL USAGE ====================== -->
+  <div id="tab-material" class="section-container">
+    <div class="grid grid-cols-12 gap-4">
+      <!-- Material Composition Donut -->
+      <div class="col-span-12 lg:col-span-4">
+        <div class="glass-card p-4" style="height: 400px;">
+          <div class="section-header"><i class="fas fa-circle-half-stroke text-cyan-600"></i> Material Composition</div>
+          <div id="chart-mat-composition" style="min-height: 300px;"><div class="skeleton" style="height:300px;"></div></div>
+        </div>
+      </div>
+
+      <!-- Most Used Material Table -->
+      <div class="col-span-12 lg:col-span-8">
+        <div class="glass-card p-4" style="height: 400px;">
+          <div class="flex items-center justify-between mb-3">
+            <div class="section-header" style="margin-bottom:0;"><i class="fas fa-table text-blue-600"></i> Most Used Material</div>
+            <div class="flex gap-2">
+              <input type="text" id="mat-search" placeholder="Cari..." class="filter-input" style="width: 130px; height: 32px; padding: 4px 10px; border-radius:8px; border:1px solid #e2e8f0; font-size:13px;" oninput="renderMatTablePage(1)" />
+              <button onclick="exportMatTableExcel()" class="toggle-btn"><i class="fas fa-download mr-1"></i>Excel</button>
+            </div>
+          </div>
+          <div class="overflow-auto" style="max-height: 280px;">
+            <table class="data-table" id="mat-table">
+              <thead>
+                <tr>
+                  <th onclick="sortMatTable('material')">Material <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortMatTable('kategori')">Kategori <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortMatTable('usage_kg')">Usage (kg) <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortMatTable('total_cost')">Cost <i class="fas fa-sort text-xs ml-1"></i></th>
+                  <th onclick="sortMatTable('total_part')">Parts <i class="fas fa-sort text-xs ml-1"></i></th>
+                </tr>
+              </thead>
+              <tbody id="mat-table-body">
+                <tr><td colspan="5" class="text-center py-8 text-slate-400">Upload file Excel terlebih dahulu</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="mat-pagination" class="mt-3"></div>
+        </div>
+      </div>
+
+      <!-- Top Material Cost Bar -->
+      <div class="col-span-12 lg:col-span-12">
+        <div class="glass-card p-4">
+          <div class="section-header"><i class="fas fa-coins text-yellow-600"></i> Top Material Cost</div>
+          <div id="chart-mat-cost" style="min-height: 300px;"><div class="skeleton" style="height:300px;"></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<!-- ===== DRAG & DROP HANDLER ===== -->
+<div id="drag-overlay" class="fixed inset-0 z-50 items-center justify-center hidden" style="background: rgba(29,78,216,0.85); backdrop-filter: blur(8px);">
+  <div class="text-center text-white">
+    <div class="text-6xl mb-4">📊</div>
+    <div class="text-2xl font-bold">Lepaskan file Excel di sini</div>
+    <div class="text-sm mt-2 opacity-75">Format .xlsx atau .xls</div>
+  </div>
+</div>
+
+<!-- ===== LOADING OVERLAY ===== -->
+<div id="loading-overlay" class="fixed inset-0 z-[9999] items-center justify-center hidden" style="background: rgba(255,255,255,0.9); backdrop-filter: blur(8px);">
+  <div class="text-center">
+    <div class="w-16 h-16 mx-auto mb-4 rounded-full border-4 border-blue-200" style="border-top-color: #1d4ed8; animation: spin 0.8s linear infinite;"></div>
+    <div class="text-base font-semibold text-slate-700">Memproses data...</div>
+    <div id="loading-info" class="text-sm text-slate-500 mt-1"></div>
+  </div>
+</div>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script src="app.js"></script>
+</body>
+</html>
