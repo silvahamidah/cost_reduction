@@ -5,10 +5,11 @@ const APP = {
   rawData: [],
   filteredData: [],
   charts: {},
-  planTarget: {
-    plan: [],
-    target: []
-  },
+    planTarget: {
+        plan: [],
+        target: [],
+        act: []
+    },
   ngTableSort: { col: 'ng_loss', dir: 'desc' },
   matTableSort: { col: 'usage_kg', dir: 'desc' },
   ngTablePage: 1,
@@ -69,140 +70,162 @@ function parseDate(str) {
 // ===== PARSE EXCEL =====
 function parseExcel(file) {
 
-  return new Promise((resolve, reject) => {
+    return new Promise((resolve, reject) => {
 
-    const reader = new FileReader();
+        const reader = new FileReader();
 
-    reader.onload = (e) => {
+        reader.onload = (e) => {
 
-      try {
+            try {
 
-        const wb =
-          XLSX.read(
-            e.target.result,
-            {
-              type: 'binary',
-              cellDates: false
+                const wb = XLSX.read(
+                    e.target.result,
+                    {
+                        type: 'binary',
+                        cellDates: false
+                    }
+                );
+
+                // =====================================
+                // PLAN TARGET
+                // =====================================
+
+                APP.planTarget = {
+
+                    plan: Array(12).fill(0),
+
+                    target: Array(12).fill(0),
+
+                    act: Array(12).fill(0)
+
+                };
+
+                const planSheetName =
+                    wb.SheetNames.find(
+                        s =>
+                            s.toLowerCase()
+                                .replace(/\s/g, '') ===
+                            'plan_target'
+                    );
+
+                if (planSheetName) {
+
+                    const planWs =
+                        wb.Sheets[
+                            planSheetName
+                        ];
+
+                    const planRows =
+                        XLSX.utils.sheet_to_json(
+                            planWs,
+                            {
+                                header: 1,
+                                raw: true
+                            }
+                        );
+
+                    // ROW 2 = PLAN CR 2026
+
+                    for (
+                        let i = 1;
+                        i <= 12;
+                        i++
+                    ) {
+
+                        APP.planTarget.plan[
+                            i - 1
+                        ] =
+                            (
+                                Number(
+                                    planRows?.[1]?.[i]
+                                ) || 0
+                            ) * 10000;
+
+                    }
+
+                    // ROW 3 = TARGET
+
+                    for (
+                        let i = 1;
+                        i <= 12;
+                        i++
+                    ) {
+
+                        APP.planTarget.target[
+                            i - 1
+                        ] =
+                            (
+                                Number(
+                                    planRows?.[2]?.[i]
+                                ) || 0
+                            ) * 10000;
+
+                    }
+
+                    // ROW 4 = ACT
+
+                    for (
+                        let i = 1;
+                        i <= 12;
+                        i++
+                    ) {
+
+                        APP.planTarget.act[
+                            i - 1
+                        ] =
+                            (
+                                Number(
+                                    planRows?.[3]?.[i]
+                                ) || 0
+                            ) * 10000;
+
+                    }
+
+                }
+
+                // =====================================
+                // DATA DASHBOARD
+                // =====================================
+
+                const sheetName =
+                    wb.SheetNames.find(
+                        s =>
+                            s.toLowerCase()
+                                .replace(/\s/g, '') ===
+                            'data_dashboard'
+                    ) ||
+                    wb.SheetNames[0];
+
+                const ws =
+                    wb.Sheets[
+                        sheetName
+                    ];
+
+                const rows =
+                    XLSX.utils.sheet_to_json(
+                        ws,
+                        {
+                            defval: null
+                        }
+                    );
+
+                resolve(rows);
+
+            } catch (err) {
+
+                reject(err);
+
             }
-          );
-
-        // =====================================
-        // PLAN TARGET
-        // =====================================
-
-        APP.planTarget = {
-
-          plan: Array(12).fill(0),
-
-          target: Array(12).fill(0)
 
         };
 
-        const planSheetName =
-          wb.SheetNames.find(
-            s =>
-              s.toLowerCase()
-                .replace(/\s/g, '') ===
-              'plan_target'
-          );
+        reader.onerror = reject;
 
-        if (planSheetName) {
+        reader.readAsBinaryString(
+            file
+        );
 
-          const planWs =
-            wb.Sheets[
-              planSheetName
-            ];
-
-          const planRows =
-            XLSX.utils.sheet_to_json(
-              planWs,
-              {
-                header: 1,
-                raw: true
-              }
-            );
-
-          // Baris PLAN CR 2026
-          for (
-            let i = 1;
-            i <= 12;
-            i++
-          ) {
-
-            APP.planTarget.plan[
-              i - 1
-            ] =
-              (
-                Number(
-                  planRows?.[1]?.[i]
-                ) || 0
-              ) * 1000;
-
-          }
-
-          // Baris TARGET
-          for (
-            let i = 1;
-            i <= 12;
-            i++
-          ) {
-
-            APP.planTarget.target[
-              i - 1
-            ] =
-              (
-                Number(
-                  planRows?.[2]?.[i]
-                ) || 0
-              ) * 1000;
-
-          }
-
-        }
-
-        // =====================================
-        // DATA DASHBOARD
-        // =====================================
-
-        const sheetName =
-          wb.SheetNames.find(
-            s =>
-              s.toLowerCase()
-                .replace(/\s/g, '') ===
-              'data_dashboard'
-          ) ||
-          wb.SheetNames[0];
-
-        const ws =
-          wb.Sheets[
-            sheetName
-          ];
-
-        const rows =
-          XLSX.utils.sheet_to_json(
-            ws,
-            {
-              defval: null
-            }
-          );
-
-        resolve(rows);
-
-      } catch (err) {
-
-        reject(err);
-
-      }
-
-    };
-
-    reader.onerror = reject;
-
-    reader.readAsBinaryString(
-      file
-    );
-
-  });
+    });
 
 }
 
@@ -2150,7 +2173,7 @@ function showMaterialDetail(
 
 }
 
-// ===== RENDER TOP MATERIAL CHART =====
+// ===== RENDER MONTHLY CHART =====
 function renderMonthlySavingChart() {
 
     const categories = [
@@ -2168,128 +2191,6 @@ function renderMonthlySavingChart() {
         'Des'
     ];
 
-    // =====================================
-    // KATEGORI
-    // =====================================
-
-    const allKategori = [
-        ...new Set(
-            APP.filteredData.map(
-                r => r.kategori || '-'
-            )
-        )
-    ].sort();
-
-    const monthlyKategori = {};
-
-    allKategori.forEach(k => {
-
-        monthlyKategori[k] =
-            Array(12).fill(0);
-
-    });
-
-    // =====================================
-    // GROUP PART + KATEGORI + BULAN
-    // =====================================
-
-    const partKategoriMap = {};
-
-    APP.filteredData.forEach(r => {
-
-        const part =
-            r.part_name || '-';
-
-        const kategori =
-            r.kategori || '-';
-
-        const bulan =
-            r.bulan;
-
-        if (!bulan)
-            return;
-
-        const key =
-            `${part}|${kategori}|${bulan}`;
-
-        if (!partKategoriMap[key]) {
-
-            partKategoriMap[key] = {
-
-                bulan,
-
-                kategori,
-
-                standard: [],
-
-                alternative: []
-
-            };
-
-        }
-
-        if (
-            r.scenario ===
-            'Standard'
-        ) {
-
-            partKategoriMap[key]
-                .standard
-                .push(r);
-
-        }
-
-        if (
-            r.scenario ===
-            'Alternative'
-        ) {
-
-            partKategoriMap[key]
-                .alternative
-                .push(r);
-
-        }
-
-    });
-
-    // =====================================
-    // HITUNG SAVING
-    // =====================================
-
-    Object.values(
-        partKategoriMap
-    ).forEach(group => {
-
-        const standardCost =
-            group.standard.reduce(
-                (sum, r) =>
-                    sum + r.total_cost,
-                0
-            );
-
-        const alternativeCost =
-            group.alternative.reduce(
-                (sum, r) =>
-                    sum + r.total_cost,
-                0
-            );
-
-        const saving =
-            standardCost -
-            alternativeCost;
-
-        monthlyKategori[
-            group.kategori
-        ][
-            group.bulan - 1
-        ] += saving;
-
-    });
-
-    // =====================================
-    // PLAN & TARGET
-    // =====================================
-
     const plan =
         APP.planTarget?.plan ||
         Array(12).fill(0);
@@ -2298,79 +2199,15 @@ function renderMonthlySavingChart() {
         APP.planTarget?.target ||
         Array(12).fill(0);
 
-    // =====================================
-    // TOTAL ACTUAL
-    // =====================================
-
-    const actualTotal =
+    const act =
+        APP.planTarget?.act ||
         Array(12).fill(0);
-
-    Object.values(
-        monthlyKategori
-    ).forEach(arr => {
-
-        arr.forEach(
-            (v, i) => {
-
-                actualTotal[i] += v;
-
-            }
-        );
-
-    });
-
-    // =====================================
-    // SERIES
-    // =====================================
-
-    const series = [
-
-        {
-            name: 'Plan',
-            type: 'column',
-            data: plan,
-            group: 'plan'
-        }
-
-    ];
-
-    allKategori.forEach(k => {
-
-        series.push({
-
-            name: k,
-
-            type: 'column',
-
-            data:
-                monthlyKategori[k],
-
-            group: 'actual'
-
-        });
-
-    });
-
-    series.push({
-
-        name: 'Target',
-
-        type: 'line',
-
-        data: target
-
-    });
-
-    // =====================================
-    // DESTROY CHART
-    // =====================================
 
     if (
         APP.charts.monthlySaving
     ) {
 
-        APP.charts.monthlySaving
-            .destroy();
+        APP.charts.monthlySaving.destroy();
 
     }
 
@@ -2382,8 +2219,6 @@ function renderMonthlySavingChart() {
 
             type: 'line',
 
-            stacked: true,
-
             toolbar: {
 
                 show: false
@@ -2392,17 +2227,51 @@ function renderMonthlySavingChart() {
 
         },
 
-        series,
+        title: {
+
+            text: 'Monthly Cost Reduction Achievement 2026',
+
+            align: 'left',
+
+            margin: 20,
+
+            style: {
+
+                fontSize: '16px',
+
+                fontWeight: 700,
+
+                color: '#0f172a'
+
+            }
+
+        },
+
+        series: [
+
+            {
+                name: 'PLAN',
+                type: 'column',
+                data: plan
+            },
+
+            {
+                name: 'ACT',
+                type: 'column',
+                data: act
+            },
+
+            {
+                name: 'TARGET',
+                type: 'line',
+                data: target
+            }
+
+        ],
 
         stroke: {
 
-            width:
-                series.map(
-                    s =>
-                        s.name === 'Target'
-                        ? 4
-                        : 0
-                ),
+            width: [0, 0, 4],
 
             curve: 'smooth'
 
@@ -2412,7 +2281,8 @@ function renderMonthlySavingChart() {
 
             bar: {
 
-                columnWidth: '55%'
+                columnWidth: '45%',
+                borderRadius: 4
 
             }
 
@@ -2434,7 +2304,7 @@ function renderMonthlySavingChart() {
 
             labels: {
 
-                formatter: function(v) {
+                formatter(v) {
 
                     return formatIDR(
                         v,
@@ -2447,184 +2317,166 @@ function renderMonthlySavingChart() {
 
         },
 
-        tooltip: {
-
-            shared: true,
-
-            intersect: false,
-
-            custom: function({
-
-            dataPointIndex
-
-        }) {
-
-            const actual =
-                actualTotal[
-                    dataPointIndex
-                ];
-
-            const planVal =
-                plan[
-                    dataPointIndex
-                ];
-
-            const targetVal =
-                target[
-                    dataPointIndex
-                ];
-
-            const achievement =
-                targetVal > 0
-                ? actual / targetVal * 100
-                : 0;
-
-            const achColor =
-                actual >= targetVal
-                ? '#10b981'
-                : '#ef4444';
-
-            let html = `
-
-            <div
-                style="
-                    min-width:220px;
-                    background:white;
-                    border-radius:10px;
-                    overflow:hidden;
-                    box-shadow:
-                        0 6px 18px rgba(0,0,0,.12);
-                    font-size:11px;
-                ">
-
-                <div
-                    style="
-                        background:#1e293b;
-                        color:white;
-                        padding:8px 10px;
-                        font-weight:700;
-                        font-size:12px;
-                    ">
-
-                    ${categories[dataPointIndex]}
-
-                </div>
-
-                <div
-                    style="
-                        padding:8px 10px;
-                    ">
-
-                    <div style="display:flex;justify-content:space-between;">
-                        <span>Plan</span>
-                        <b>${formatIDR(planVal)}</b>
-                    </div>
-
-                    <div style="display:flex;justify-content:space-between;">
-                        <span>Actual</span>
-                        <b style="color:#10b981;">
-                            ${formatIDR(actual)}
-                        </b>
-                    </div>
-
-                    <div style="display:flex;justify-content:space-between;">
-                        <span>Target</span>
-                        <b style="color:#dc2626;">
-                            ${formatIDR(targetVal)}
-                        </b>
-                    </div>
-
-                    <div
-                        style="
-                            display:flex;
-                            justify-content:space-between;
-                            margin-top:4px;
-                            padding-top:4px;
-                            border-top:1px solid #e2e8f0;
-                        ">
-
-                        <span>Achv.</span>
-
-                        <b
-                            style="
-                                color:${achColor};
-                            ">
-
-                            ${achievement.toFixed(1)}%
-
-                        </b>
-
-                    </div>
-
-                    <div
-                        style="
-                            margin-top:6px;
-                            padding-top:6px;
-                            border-top:1px solid #e2e8f0;
-                        ">
-
-            `;
-
-            Object.keys(
-                monthlyKategori
-            ).forEach(k => {
-
-                const value =
-                    monthlyKategori[k][
-                        dataPointIndex
-                    ] || 0;
-
-                if (!value)
-                    return;
-
-                html += `
-
-                <div
-                    style="
-                        display:flex;
-                        justify-content:space-between;
-                        margin-top:2px;
-                    ">
-
-                    <span>
-                        ${k}
-                    </span>
-
-                    <span>
-                        ${formatIDR(value)}
-                    </span>
-
-                </div>
-
-                `;
-
-            });
-
-            html += `
-                    </div>
-                </div>
-            </div>
-            `;
-
-            return html;
-
-        }
-
-        },
-
         colors: [
 
             '#f59e0b', // PLAN
-
-            ...CATEGORY_COLORS,
-
-            '#dc2626' // TARGET
+            '#10b981', // ACT
+            '#dc2626'  // TARGET
 
         ],
 
         legend: {
 
-            position: 'top'
+            position: 'top',
+
+            fontSize: '12px'
+
+        },
+
+        tooltip: {
+
+            shared: false,
+
+            intersect: true,
+
+            custom: function({
+
+                dataPointIndex
+
+            }) {
+
+                const planVal =
+                    plan[dataPointIndex] || 0;
+
+                const actVal =
+                    act[dataPointIndex] || 0;
+
+                const targetVal =
+                    target[dataPointIndex] || 0;
+
+                const achievement =
+                    targetVal > 0
+                    ? (
+                        actVal /
+                        targetVal
+                    ) * 100
+                    : 0;
+
+                const achColor =
+                    actVal >= targetVal
+                    ? '#10b981'
+                    : '#ef4444';
+
+                return `
+
+                <div
+                    style="
+                        width:220px;
+                        background:#fff;
+                        border-radius:12px;
+                        overflow:hidden;
+                        box-shadow:0 8px 25px rgba(0,0,0,.15);
+                        font-size:11px;
+                    "
+                >
+
+                    <div
+                        style="
+                            background:#0f172a;
+                            color:white;
+                            padding:8px 12px;
+                            font-weight:700;
+                            font-size:12px;
+                        "
+                    >
+                        ${categories[dataPointIndex]}
+                    </div>
+
+                    <div
+                        style="
+                            padding:10px 12px;
+                        "
+                    >
+
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                margin-bottom:5px;
+                            "
+                        >
+                            <span style="color:#f59e0b;">
+                                ● PLAN
+                            </span>
+
+                            <b>
+                                ${formatIDR(planVal)}
+                            </b>
+                        </div>
+
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                margin-bottom:5px;
+                            "
+                        >
+                            <span style="color:#10b981;">
+                                ● ACT
+                            </span>
+
+                            <b>
+                                ${formatIDR(actVal)}
+                            </b>
+                        </div>
+
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                margin-bottom:8px;
+                            "
+                        >
+                            <span style="color:#dc2626;">
+                                ● TARGET
+                            </span>
+
+                            <b>
+                                ${formatIDR(targetVal)}
+                            </b>
+                        </div>
+
+                        <div
+                            style="
+                                border-top:1px solid #e5e7eb;
+                                padding-top:8px;
+                                display:flex;
+                                justify-content:space-between;
+                            "
+                        >
+
+                            <span>
+                                Achievement
+                            </span>
+
+                            <b
+                                style="
+                                    color:${achColor};
+                                    font-size:13px;
+                                "
+                            >
+                                ${achievement.toFixed(1)}%
+                            </b>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                `;
+
+            }
 
         }
 
