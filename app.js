@@ -139,7 +139,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[1]?.[i]
                                 ) || 0
-                            ) * 10000;
+                            ) * 1000;
 
                     }
 
@@ -158,7 +158,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[2]?.[i]
                                 ) || 0
-                            ) * 10000;
+                            ) * 1000;
 
                     }
 
@@ -177,7 +177,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[3]?.[i]
                                 ) || 0
-                            ) * 10000;
+                            ) * 1000;
 
                     }
 
