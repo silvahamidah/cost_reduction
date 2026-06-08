@@ -139,7 +139,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[1]?.[i]
                                 ) || 0
-                            ) * 1000;
+                            ) * 10000;
 
                     }
 
@@ -158,7 +158,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[2]?.[i]
                                 ) || 0
-                            ) * 1000;
+                            ) * 10000;
 
                     }
 
@@ -177,7 +177,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[3]?.[i]
                                 ) || 0
-                            ) * 1000;
+                            ) * 10000;
 
                     }
 
@@ -516,6 +516,11 @@ function renderTopSavingChart() {
 
         ${parts.map((p, i) => {
 
+            const showWarning =
+                hasMissingStandardMaterial(
+                    p.name
+                );
+
           const pct =
             Math.abs(p.saving) /
             maxAbsSaving * 100;
@@ -547,17 +552,31 @@ function renderTopSavingChart() {
                 </span>
 
                 <span
-                  class="text-xs text-slate-700 font-medium cursor-pointer hover:text-blue-600 hover:underline"
-                  style="
-                    flex:1;
-                    min-width:0;
-                  "
-                  title="Klik untuk melihat detail"
-                  onclick="showPartDetail('${encodeURIComponent(p.name)}')">
+                    class="text-xs text-slate-700 font-medium cursor-pointer hover:text-blue-600 hover:underline"
+                    style="
+                        flex:1;
+                        min-width:0;
+                    "
+                    title="Klik untuk melihat detail"
+                    onclick="showPartDetail('${encodeURIComponent(p.name)}')">
 
-                  ${p.name}
+                    ${p.name}
 
                 </span>
+
+                ${
+                showWarning
+                    ? `
+                    <span
+                        class="badge badge-yellow"
+                        title="Terdapat kategori yang memiliki material Alternative tetapi tidak memiliki material Standard">
+
+                        ⚠ No Std
+
+                    </span>
+                    `
+                    : ''
+                }
 
               </div>
 
@@ -601,6 +620,59 @@ function renderTopSavingChart() {
     </div>
 
   `;
+}
+
+function hasMissingStandardMaterial(partName) {
+
+  const rows =
+    APP.filteredData.filter(
+      r => r.part_name === partName
+    );
+
+  const kategoriMap = {};
+
+  rows.forEach(r => {
+
+    const kategori =
+      r.kategori || '-';
+
+    if (!kategoriMap[kategori]) {
+
+      kategoriMap[kategori] = {
+        hasStandard: false,
+        hasAlternative: false
+      };
+
+    }
+
+    const material =
+      (r.material || '')
+      .toUpperCase();
+
+    const isRecycle =
+      material.includes('PELETIZING') ||
+      material.includes('REGRIND');
+
+    if (isRecycle)
+      return;
+
+    if (r.scenario === 'Standard') {
+      kategoriMap[kategori].hasStandard = true;
+    }
+
+    if (r.scenario === 'Alternative') {
+      kategoriMap[kategori].hasAlternative = true;
+    }
+
+  });
+
+  return Object.values(kategoriMap)
+    .some(
+      x =>
+        !x.hasStandard &&
+        x.hasAlternative
+    );
+
 }
 
 function closePartDetail() {
