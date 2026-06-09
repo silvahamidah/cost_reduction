@@ -2249,57 +2249,132 @@ function showMaterialDetail(
 function renderMonthlySavingChart() {
 
     const categories = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'Mei',
-        'Jun',
-        'Jul',
-        'Ags',
-        'Sep',
-        'Okt',
-        'Nov',
-        'Des'
+        'Jan','Feb','Mar','Apr','Mei','Jun',
+        'Jul','Ags','Sep','Okt','Nov','Des'
     ];
 
-    const plan =
-        APP.planTarget?.plan ||
-        Array(12).fill(0);
-
-    const target =
-        APP.planTarget?.target ||
-        Array(12).fill(0);
-
-    const act =
-        APP.planTarget?.act ||
-        Array(12).fill(0);
+    const plan   = APP.planTarget?.plan   || Array(12).fill(0);
+    const target = APP.planTarget?.target || Array(12).fill(0);
+    const act    = APP.planTarget?.act    || Array(12).fill(0);
 
     if (APP.charts.monthlySaving) {
         APP.charts.monthlySaving.destroy();
+        APP.charts.monthlySaving = null;
     }
 
-    const options = {
+    const container = document.getElementById('chart-monthly-saving');
+    container.innerHTML = '';
+
+    APP.charts.monthlySaving = Highcharts.chart(container, {
 
         chart: {
+            type: 'column',
             height: 360,
-            type: 'line',
-            toolbar: {
-                show: false
-            },
-            fontFamily:
-                'Inter, Segoe UI, sans-serif'
+            style: { fontFamily: 'Inter, Segoe UI, sans-serif' },
+            animation: false
         },
 
         title: {
-            text:
-                'Monthly Cost Reduction Achievement 2026',
+            text: 'Monthly Cost Reduction Achievement 2026',
             align: 'left',
-            margin: 20,
-            style: {
-                fontSize: '16px',
-                fontWeight: 700,
-                color: '#0f172a'
+            style: { fontSize: '16px', fontWeight: '700', color: '#0f172a' }
+        },
+
+        credits: { enabled: false },
+
+        xAxis: {
+            categories,
+            lineWidth: 0,
+            tickWidth: 0,
+            labels: { style: { color: '#64748b', fontSize: '11px' } }
+        },
+
+        yAxis: {
+            title: { text: null },
+            gridLineDashStyle: 'Dash',
+            gridLineColor: '#e5e7eb',
+            labels: {
+                style: { color: '#64748b', fontSize: '11px' },
+                formatter() { return formatIDR(this.value, false); }
+            }
+        },
+
+        legend: {
+            align: 'right',
+            verticalAlign: 'top',
+            itemStyle: { fontSize: '11px', fontWeight: '500', color: '#374151' }
+        },
+
+        tooltip: {
+            useHTML: true,
+            outside: true,
+            shadow: false,
+            borderWidth: 0,
+            borderRadius: 0,
+            padding: 0,
+            backgroundColor: 'transparent',
+            style: { fontFamily: 'Inter, Segoe UI, sans-serif' },
+            formatter() {
+                const i           = this.point.index;
+                const planVal     = plan[i]   || 0;
+                const actVal      = act[i]    || 0;
+                const targetVal   = target[i] || 0;
+                const achievement = targetVal > 0 ? (actVal / targetVal) * 100 : 0;
+                const achColor    = actVal >= targetVal ? '#10b981' : '#ef4444';
+
+                return `
+                    <div style="
+                        width:220px;
+                        background:#fff;
+                        border-radius:12px;
+                        overflow:hidden;
+                        box-shadow:0 8px 25px rgba(0,0,0,.15);
+                        font-size:11px;
+                        font-family:Inter,Segoe UI,sans-serif;
+                    ">
+                        <div style="
+                            background:#0f172a;
+                            color:white;
+                            padding:8px 12px;
+                            font-weight:700;
+                            font-size:12px;
+                        ">
+                            ${categories[i]}
+                        </div>
+                        <div style="padding:10px 12px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                                <span style="color:#f59e0b;">● PLAN</span>
+                                <b>${formatIDR(planVal)}</b>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+                                <span style="color:#10b981;">● ACT</span>
+                                <b>${formatIDR(actVal)}</b>
+                            </div>
+                            <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                <span style="color:#dc2626;">● TARGET</span>
+                                <b>${formatIDR(targetVal)}</b>
+                            </div>
+                            <div style="
+                                border-top:1px solid #e5e7eb;
+                                padding-top:8px;
+                                display:flex;
+                                justify-content:space-between;
+                            ">
+                                <span>Achievement</span>
+                                <b style="color:${achColor};font-size:13px;">
+                                    ${achievement.toFixed(1)}%
+                                </b>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+        },
+
+        plotOptions: {
+            column: {
+                borderRadius: 4,
+                pointPadding: 0.1,
+                groupPadding: 0.15
             }
         },
 
@@ -2307,358 +2382,74 @@ function renderMonthlySavingChart() {
             {
                 name: 'PLAN',
                 type: 'column',
-                data: plan
+                data: plan,
+                color: '#f59e0b',
+                dataLabels: {
+                    enabled: true,
+                    inside: true,
+                    verticalAlign: 'middle',
+                    style: {
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        color: '#78350f',
+                        textOutline: 'none'
+                    },
+                    formatter() {
+                        if (!this.y || this.y === 0) return '';
+                        return formatIDR(this.y, false);
+                    }
+                }
             },
             {
                 name: 'ACT',
                 type: 'column',
-                data: act
+                data: act,
+                color: '#10b981',
+                dataLabels: {
+                    enabled: true,
+                    inside: false,
+                    verticalAlign: 'top',
+                    y: -28,
+                    style: {
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        color: '#047857',
+                        textOutline: 'none'
+                    },
+                    formatter() {
+                        if (!this.y || this.y === 0) return '';
+                        return formatIDR(this.y, false);
+                    }
+                }
             },
             {
                 name: 'TARGET',
                 type: 'line',
-                data: target
-            }
-        ],
-
-        colors: [
-            '#f59e0b', // PLAN
-            '#10b981', // ACT
-            '#dc2626'  // TARGET
-        ],
-
-        stroke: {
-            width: [0, 0, 3],
-            curve: 'smooth'
-        },
-
-        markers: {
-            size: 0
-        },
-
-        plotOptions: {
-            bar: {
-                columnWidth: '45%',
-                borderRadius: 4,
-                borderRadiusApplication: 'end'
-            }
-        },
-
-        dataLabels: {
-            enabled: true,
-
-            // PLAN & ACT
-            enabledOnSeries: [0, 1],
-
-            offsetY: -10,
-
-            style: {
-                fontSize: '10px',
-                fontWeight: 600
-            },
-
-            background: {
-                enabled: false
-            },
-
-            dropShadow: {
-                enabled: false
-            },
-
-            formatter: function (
-                val,
-                { seriesIndex }
-            ) {
-
-                if (!val || val === 0) {
-                    return '';
-                }
-
-                return formatIDR(
-                    val,
-                    false
-                );
-            }
-        },
-
-        grid: {
-            borderColor: '#e5e7eb',
-            strokeDashArray: 4,
-            padding: {
-                top: 25
-            }
-        },
-
-        xaxis: {
-            categories,
-
-            axisBorder: {
-                show: false
-            },
-
-            axisTicks: {
-                show: false
-            },
-
-            labels: {
-                style: {
-                    colors: '#64748b',
-                    fontSize: '11px'
+                data: target,
+                color: '#dc2626',
+                lineWidth: 3,
+                marker: { enabled: false },
+                dataLabels: {
+                    enabled: true,
+                    formatter() {
+                        const lastIndex = this.series.data.reduce((acc, p, i) => {
+                            return p.y ? i : acc;
+                        }, 0);
+                        if (this.point.index !== lastIndex) return '';
+                        return formatIDR(this.y, false);
+                    },
+                    align: 'left',
+                    x: 8,
+                    style: {
+                        fontSize: '10px',
+                        fontWeight: '700',
+                        color: '#dc2626',
+                        textOutline: 'none'
+                    }
                 }
             }
-        },
-
-        yaxis: {
-            labels: {
-                style: {
-                    colors: '#64748b',
-                    fontSize: '11px'
-                },
-
-                formatter(v) {
-                    return formatIDR(
-                        v,
-                        false
-                    );
-                }
-            }
-        },
-
-        legend: {
-            position: 'top',
-            horizontalAlign: 'right',
-            fontSize: '11px',
-            fontWeight: 500,
-
-            markers: {
-                radius: 12
-            }
-        },
-
-        tooltip: {
-
-            shared: false,
-
-            intersect: true,
-
-            custom: function({
-
-                dataPointIndex
-
-            }) {
-
-                const planVal =
-                    plan[dataPointIndex] || 0;
-
-                const actVal =
-                    act[dataPointIndex] || 0;
-
-                const targetVal =
-                    target[dataPointIndex] || 0;
-
-                const achievement =
-                    targetVal > 0
-                    ? (
-                        actVal /
-                        targetVal
-                    ) * 100
-                    : 0;
-
-                const achColor =
-                    actVal >= targetVal
-                    ? '#10b981'
-                    : '#ef4444';
-
-                return `
-
-                <div
-                    style="
-                        width:220px;
-                        background:#fff;
-                        border-radius:12px;
-                        overflow:hidden;
-                        box-shadow:0 8px 25px rgba(0,0,0,.15);
-                        font-size:11px;
-                    "
-                >
-
-                    <div
-                        style="
-                            background:#0f172a;
-                            color:white;
-                            padding:8px 12px;
-                            font-weight:700;
-                            font-size:12px;
-                        "
-                    >
-                        ${categories[dataPointIndex]}
-                    </div>
-
-                    <div
-                        style="
-                            padding:10px 12px;
-                        "
-                    >
-
-                        <div
-                            style="
-                                display:flex;
-                                justify-content:space-between;
-                                margin-bottom:5px;
-                            "
-                        >
-                            <span style="color:#f59e0b;">
-                                ● PLAN
-                            </span>
-
-                            <b>
-                                ${formatIDR(planVal)}
-                            </b>
-                        </div>
-
-                        <div
-                            style="
-                                display:flex;
-                                justify-content:space-between;
-                                margin-bottom:5px;
-                            "
-                        >
-                            <span style="color:#10b981;">
-                                ● ACT
-                            </span>
-
-                            <b>
-                                ${formatIDR(actVal)}
-                            </b>
-                        </div>
-
-                        <div
-                            style="
-                                display:flex;
-                                justify-content:space-between;
-                                margin-bottom:8px;
-                            "
-                        >
-                            <span style="color:#dc2626;">
-                                ● TARGET
-                            </span>
-
-                            <b>
-                                ${formatIDR(targetVal)}
-                            </b>
-                        </div>
-
-                        <div
-                            style="
-                                border-top:1px solid #e5e7eb;
-                                padding-top:8px;
-                                display:flex;
-                                justify-content:space-between;
-                            "
-                        >
-                            <span>
-                                Achievement
-                            </span>
-
-                            <b
-                                style="
-                                    color:${achColor};
-                                    font-size:13px;
-                                "
-                            >
-                                ${achievement.toFixed(1)}%
-                            </b>
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                `;
-            }
-        },
-
-        chart: {
-            height: 360,
-            type: 'line',
-            toolbar: {
-                show: false
-            },
-            fontFamily:
-                'Inter, Segoe UI, sans-serif',
-
-            events: {
-                mounted: function(chartCtx) {
-
-                    setTimeout(() => {
-
-                        const labels =
-                            chartCtx.el.querySelectorAll(
-                                '.apexcharts-data-label'
-                            );
-
-                        labels.forEach(label => {
-
-                            const seriesIndex =
-                                Number(
-                                    label.parentNode
-                                        ?.getAttribute(
-                                            'rel'
-                                        )
-                                );
-
-                            if (
-                                seriesIndex === 0
-                            ) {
-                                label.setAttribute(
-                                    'fill',
-                                    '#b45309'
-                                );
-
-                                label.setAttribute(
-                                    'dy',
-                                    '-18'
-                                );
-                            }
-
-                            if (
-                                seriesIndex === 1
-                            ) {
-                                label.setAttribute(
-                                    'fill',
-                                    '#047857'
-                                );
-
-                                label.setAttribute(
-                                    'dy',
-                                    '-4'
-                                );
-                            }
-
-                        });
-
-                    }, 100);
-
-                }
-            }
-        }
-    };
-
-    const container =
-        document.getElementById(
-            'chart-monthly-saving'
-        );
-
-    container.innerHTML = '';
-
-    APP.charts.monthlySaving =
-        new ApexCharts(
-            container,
-            options
-        );
-
-    APP.charts.monthlySaving.render();
+        ]
+    });
 }
 
 // ===== RENDER CATEGORY CARDS =====
