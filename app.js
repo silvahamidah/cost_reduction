@@ -139,7 +139,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[1]?.[i]
                                 ) || 0
-                            ) * 10000;
+                            ) * 1000;
 
                     }
 
@@ -158,7 +158,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[2]?.[i]
                                 ) || 0
-                            ) * 10000;
+                            ) * 1000;
 
                     }
 
@@ -177,7 +177,7 @@ function parseExcel(file) {
                                 Number(
                                     planRows?.[3]?.[i]
                                 ) || 0
-                            ) * 10000;
+                            ) * 1000;
 
                     }
 
@@ -2275,134 +2275,164 @@ function renderMonthlySavingChart() {
         APP.planTarget?.act ||
         Array(12).fill(0);
 
-    if (
-        APP.charts.monthlySaving
-    ) {
-
+    if (APP.charts.monthlySaving) {
         APP.charts.monthlySaving.destroy();
-
     }
 
     const options = {
 
         chart: {
-
             height: 360,
-
             type: 'line',
-
             toolbar: {
-
                 show: false
-
-            }
-
+            },
+            fontFamily:
+                'Inter, Segoe UI, sans-serif'
         },
 
         title: {
-
-            text: 'Monthly Cost Reduction Achievement 2026',
-
+            text:
+                'Monthly Cost Reduction Achievement 2026',
             align: 'left',
-
             margin: 20,
-
             style: {
-
                 fontSize: '16px',
-
                 fontWeight: 700,
-
                 color: '#0f172a'
-
             }
-
         },
 
         series: [
-
             {
                 name: 'PLAN',
                 type: 'column',
                 data: plan
             },
-
             {
                 name: 'ACT',
                 type: 'column',
                 data: act
             },
-
             {
                 name: 'TARGET',
                 type: 'line',
                 data: target
             }
+        ],
 
+        colors: [
+            '#f59e0b', // PLAN
+            '#10b981', // ACT
+            '#dc2626'  // TARGET
         ],
 
         stroke: {
-
-            width: [0, 0, 4],
-
+            width: [0, 0, 3],
             curve: 'smooth'
+        },
 
+        markers: {
+            size: 0
         },
 
         plotOptions: {
-
             bar: {
-
                 columnWidth: '45%',
-                borderRadius: 4
-
+                borderRadius: 4,
+                borderRadiusApplication: 'end'
             }
-
         },
 
         dataLabels: {
+            enabled: true,
 
-            enabled: false
+            // PLAN & ACT
+            enabledOnSeries: [0, 1],
 
+            offsetY: -10,
+
+            style: {
+                fontSize: '10px',
+                fontWeight: 600
+            },
+
+            background: {
+                enabled: false
+            },
+
+            dropShadow: {
+                enabled: false
+            },
+
+            formatter: function (
+                val,
+                { seriesIndex }
+            ) {
+
+                if (!val || val === 0) {
+                    return '';
+                }
+
+                return formatIDR(
+                    val,
+                    false
+                );
+            }
+        },
+
+        grid: {
+            borderColor: '#e5e7eb',
+            strokeDashArray: 4,
+            padding: {
+                top: 25
+            }
         },
 
         xaxis: {
+            categories,
 
-            categories
+            axisBorder: {
+                show: false
+            },
 
+            axisTicks: {
+                show: false
+            },
+
+            labels: {
+                style: {
+                    colors: '#64748b',
+                    fontSize: '11px'
+                }
+            }
         },
 
         yaxis: {
-
             labels: {
+                style: {
+                    colors: '#64748b',
+                    fontSize: '11px'
+                },
 
                 formatter(v) {
-
                     return formatIDR(
                         v,
                         false
                     );
-
                 }
-
             }
-
         },
 
-        colors: [
-
-            '#f59e0b', // PLAN
-            '#10b981', // ACT
-            '#dc2626'  // TARGET
-
-        ],
-
         legend: {
-
             position: 'top',
+            horizontalAlign: 'right',
+            fontSize: '11px',
+            fontWeight: 500,
 
-            fontSize: '12px'
-
+            markers: {
+                radius: 12
+            }
         },
 
         tooltip: {
@@ -2526,7 +2556,6 @@ function renderMonthlySavingChart() {
                                 justify-content:space-between;
                             "
                         >
-
                             <span>
                                 Achievement
                             </span>
@@ -2547,11 +2576,73 @@ function renderMonthlySavingChart() {
                 </div>
 
                 `;
-
             }
+        },
 
+        chart: {
+            height: 360,
+            type: 'line',
+            toolbar: {
+                show: false
+            },
+            fontFamily:
+                'Inter, Segoe UI, sans-serif',
+
+            events: {
+                mounted: function(chartCtx) {
+
+                    setTimeout(() => {
+
+                        const labels =
+                            chartCtx.el.querySelectorAll(
+                                '.apexcharts-data-label'
+                            );
+
+                        labels.forEach(label => {
+
+                            const seriesIndex =
+                                Number(
+                                    label.parentNode
+                                        ?.getAttribute(
+                                            'rel'
+                                        )
+                                );
+
+                            if (
+                                seriesIndex === 0
+                            ) {
+                                label.setAttribute(
+                                    'fill',
+                                    '#b45309'
+                                );
+
+                                label.setAttribute(
+                                    'dy',
+                                    '-18'
+                                );
+                            }
+
+                            if (
+                                seriesIndex === 1
+                            ) {
+                                label.setAttribute(
+                                    'fill',
+                                    '#047857'
+                                );
+
+                                label.setAttribute(
+                                    'dy',
+                                    '-4'
+                                );
+                            }
+
+                        });
+
+                    }, 100);
+
+                }
+            }
         }
-
     };
 
     const container =
@@ -2567,9 +2658,7 @@ function renderMonthlySavingChart() {
             options
         );
 
-    APP.charts.monthlySaving
-        .render();
-
+    APP.charts.monthlySaving.render();
 }
 
 // ===== RENDER CATEGORY CARDS =====
