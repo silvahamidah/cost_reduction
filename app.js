@@ -245,6 +245,7 @@ function normalizeRow(row) {
     ng_prod: parseFloat(row.ng_prod || row.NG_PROD || 0) || 0,
     tanggal: d,
     kategori: String(row.kategori || row.KATEGORI || ''),
+    hopper: String(row.hopper || row.HOPPER || ''),
     bulan: d ? d.getMonth() + 1 : null,
     tahun: d ? d.getFullYear() : null,
     // periode key: "Apr 2026"
@@ -2269,7 +2270,8 @@ function renderMonthlySavingChart() {
 
         chart: {
             type: 'column',
-            height: 360,
+            height: 420,
+            backgroundColor: '#ffffff',
             style: { fontFamily: 'Inter, Segoe UI, sans-serif' },
             animation: false
         },
@@ -2344,15 +2346,15 @@ function renderMonthlySavingChart() {
                         <div style="padding:10px 12px;">
                             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                                 <span style="color:#f59e0b;">● PLAN</span>
-                                <b>${formatIDR(planVal)}</b>
+                                <b style="color:#f59e0b;">${formatIDR(planVal)}</b>
                             </div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
                                 <span style="color:#10b981;">● ACT</span>
-                                <b>${formatIDR(actVal)}</b>
+                                <b style="color:#10b981;">${formatIDR(actVal)}</b>
                             </div>
                             <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
                                 <span style="color:#dc2626;">● TARGET</span>
-                                <b>${formatIDR(targetVal)}</b>
+                                <b style="color:#dc2626;">${formatIDR(targetVal)}</b>
                             </div>
                             <div style="
                                 border-top:1px solid #e5e7eb;
@@ -2372,6 +2374,7 @@ function renderMonthlySavingChart() {
 
         plotOptions: {
             column: {
+                borderWidth: 0,
                 borderRadius: 4,
                 pointPadding: 0.1,
                 groupPadding: 0.15
@@ -2409,7 +2412,7 @@ function renderMonthlySavingChart() {
                     enabled: true,
                     inside: false,
                     verticalAlign: 'top',
-                    y: -28,
+                    y: -35,
                     style: {
                         fontSize: '10px',
                         fontWeight: '700',
@@ -2950,6 +2953,179 @@ function showPartDetailKategori(
 
 }
 
+// ===== RENDER HOPPER CARDS =====
+function renderHopperCards() {
+  // Group by hopper
+  const byHopper = {};
+
+  APP.filteredData.forEach(r => {
+    const hopper = r.hopper || 'Unknown';
+
+    if (!byHopper[hopper]) {
+      byHopper[hopper] = {
+        parts: new Set(),
+        std: 0,
+        alt: 0,
+        rows: []
+      };
+    }
+
+    byHopper[hopper].parts.add(r.part_name);
+
+    if (r.scenario === 'Standard')
+      byHopper[hopper].std += r.total_cost;
+
+    if (r.scenario === 'Alternative')
+      byHopper[hopper].alt += r.total_cost;
+
+    byHopper[hopper].rows.push(r);
+  });
+
+  const container = document.getElementById('hopper-cards');
+
+  if (Object.keys(byHopper).length === 0) {
+    container.innerHTML = `<div class="col-span-3 empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><div class="text-base font-semibold">Data belum tersedia</div><div class="text-sm mt-1">Upload file Excel terlebih dahulu</div></div>`;
+    return;
+  }
+
+    const sortedHopper = Object.entries(byHopper)
+    .sort((a, b) =>
+        (b[1].std - b[1].alt) -
+        (a[1].std - a[1].alt)
+    );
+
+  container.innerHTML = sortedHopper.map(([hopper, val], idx) => {
+
+    const saving = val.std - val.alt;
+    const partCount = val.parts.size;
+    const avgSaving = partCount > 0 ? saving / partCount : 0;
+    const isSav = saving >= 0;
+    const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
+
+    const partSaving = {};
+
+    val.rows.forEach(r => {
+      if (!partSaving[r.part_name]) {
+        partSaving[r.part_name] = {
+          std: 0,
+          alt: 0
+        };
+      }
+
+      if (r.scenario === 'Standard')
+        partSaving[r.part_name].std += r.total_cost;
+
+      if (r.scenario === 'Alternative')
+        partSaving[r.part_name].alt += r.total_cost;
+    });
+
+    const allParts = Object.entries(partSaving)
+      .map(([name, v]) => ({
+        name,
+        saving: v.std - v.alt
+      }))
+      .sort((a, b) => b.saving - a.saving);
+
+    const maxAbsSaving =
+      Math.max(...allParts.map(p => Math.abs(p.saving)), 1);
+
+    return `
+      <div class="category-card fade-in fade-in-delay-${(idx % 4) + 1}">
+        <div class="h-1.5" style="background: linear-gradient(90deg, ${color}, ${color}88);"></div>
+
+        <div class="p-4">
+
+          <div class="flex items-start justify-between mb-3">
+            <div>
+              <div class="font-bold text-slate-800 text-base">${hopper}</div>
+              <div class="text-xs text-slate-500 mt-0.5">${partCount} Part</div>
+            </div>
+
+            <div class="text-right">
+              <div class="font-mono font-bold text-base ${isSav ? 'text-emerald-600' : 'text-red-600'}">
+                ${formatIDR(saving)}
+              </div>
+              <div class="text-xs text-slate-400">
+                Avg ${formatIDR(avgSaving)}
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-2">
+            <div class="text-xs font-semibold text-slate-500 mb-2">
+              Semua Part (${allParts.length})
+            </div>
+
+            <div class="cat-part-list space-y-2">
+
+              ${allParts.map((p, i) => {
+
+                const pct =
+                  Math.abs(p.saving) / maxAbsSaving * 100;
+
+                const pSav =
+                  p.saving >= 0;
+
+                const rankClass =
+                  i === 0 ? 'rank-1' :
+                  i === 1 ? 'rank-2' :
+                  i === 2 ? 'rank-3' :
+                  'rank-n';
+
+                return `
+                  <div>
+
+                    <div class="flex items-center justify-between mb-1">
+
+                      <div class="flex items-center gap-1.5"
+                           style="flex:1;min-width:0;overflow:hidden;">
+
+                        <span class="rank-badge ${rankClass}">
+                          ${i + 1}
+                        </span>
+
+                        <span
+                          class="text-xs text-slate-700 font-medium cursor-pointer hover:text-blue-600 hover:underline"
+                          style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block;"
+                          title="${p.name}"
+                          onclick="showPartDetailKategori(
+                            '${encodeURIComponent(p.name)}',
+                            '${encodeURIComponent(hopper)}'
+                          )">
+
+                          ${p.name}
+
+                        </span>
+
+                      </div>
+
+                      <span class="text-xs font-mono font-semibold ${pSav ? 'text-emerald-600' : 'text-red-600'}"
+                            style="margin-left:8px;white-space:nowrap;">
+                        ${formatIDR(p.saving)}
+                      </span>
+
+                    </div>
+
+                    <div class="progress-bar">
+                      <div class="progress-bar-fill"
+                           style="width:${pct}%; background:${pSav ? '#10b981' : '#ef4444'};">
+                      </div>
+                    </div>
+
+                  </div>
+                `;
+
+              }).join('')}
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
 // ===== RENDER NG CHARTS =====
 function renderNGCharts() {
   // HANYA DATA ALTERNATIVE
@@ -3416,6 +3592,8 @@ function renderDashboard() {
     renderMonthlySavingChart()
   } else if (activeTab === 'category') {
     renderCategoryCards();
+  } else if (activeTab === 'hopper') {
+    renderHopperCards();
   } else if (activeTab === 'ng') {
     renderNGCharts();
     renderNGTable();
