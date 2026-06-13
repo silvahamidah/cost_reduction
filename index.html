@@ -857,6 +857,7 @@
   <div class="flex gap-2 p-1.5 rounded-xl inline-flex" style="background: #e8edf5;">
     <button class="nav-tab active" onclick="switchTab('overview')"><i class="fas fa-chart-pie mr-1.5"></i>Overview</button>
     <button class="nav-tab" onclick="switchTab('category')"><i class="fas fa-layer-group mr-1.5"></i>Per Kategori</button>
+    <button class="nav-tab" onclick="switchTab('hopper')"><i class="fas fa-layer-group mr-1.5"></i>Per Hopper</button>
     <button class="nav-tab" onclick="switchTab('ng')"><i class="fas fa-triangle-exclamation mr-1.5"></i>NG Analysis</button>
     <button class="nav-tab" onclick="switchTab('material')"><i class="fas fa-cubes mr-1.5"></i>Material Usage</button>
   </div>
@@ -865,7 +866,7 @@
 <!-- ===== MAIN CONTENT ===== -->
 <main class="max-w-screen-2xl mx-auto px-6 py-4 pb-10">
 
-  <!-- ====================== CONTAINER 2: OVERVIEW ====================== -->
+  <!-- ====================== CONTAINER: OVERVIEW ====================== -->
   <div id="tab-overview" class="section-container active">
     <div class="grid grid-cols-12 gap-4">
 
@@ -937,7 +938,7 @@
 
             <div class="glass-card p-4 h-full">
 
-                <div id="chart-monthly-saving">
+                <div id="chart-monthly-saving" class="h-full">
 
                     <div
                         class="skeleton"
@@ -953,7 +954,7 @@
     </div>
   </div>
 
-  <!-- ====================== CONTAINER 3: KATEGORI MATERIAL ====================== -->
+  <!-- ====================== CONTAINER: KATEGORI MATERIAL ====================== -->
   <div id="tab-category" class="section-container">
     <div class="flex items-center justify-between mb-4">
       <div class="section-header" style="margin-bottom:0; font-size: 16px;">
@@ -967,7 +968,21 @@
     </div>
   </div>
 
-  <!-- ====================== CONTAINER 4: NG ANALYSIS ====================== -->
+  <!-- ====================== CONTAINER: HOPPER ====================== -->
+  <div id="tab-hopper" class="section-container">
+    <div class="flex items-center justify-between mb-4">
+      <div class="section-header" style="margin-bottom:0; font-size: 16px;">
+        <i class="fas fa-layer-group text-blue-600"></i> Saving Berdasarkan Hopper
+      </div>
+    </div>
+    <div id="hopper-cards" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div class="skeleton" style="height: 200px; border-radius: 14px;"></div>
+      <div class="skeleton" style="height: 200px; border-radius: 14px;"></div>
+      <div class="skeleton" style="height: 200px; border-radius: 14px;"></div>
+    </div>
+  </div>
+
+  <!-- ====================== CONTAINER: NG ANALYSIS ====================== -->
   <div id="tab-ng" class="section-container">
     <div class="grid grid-cols-12 gap-4">
       <!-- Top 10 NG Part -->
@@ -1038,7 +1053,7 @@
     </div>
   </div>
 
-  <!-- ====================== CONTAINER 5: MATERIAL USAGE ====================== -->
+  <!-- ====================== CONTAINER: MATERIAL USAGE ====================== -->
   <div id="tab-material" class="section-container">
     <div class="grid grid-cols-12 gap-4">
       <!-- Material Composition Donut -->
