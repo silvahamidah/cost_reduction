@@ -1286,6 +1286,619 @@ function showPartDetail(encodedPartName) {
 
 }
 
+// ===== SAVING MOM =====
+function getActualSavingByCategory() {
+
+    const altRows =
+        APP.filteredData.filter(
+            r => r.scenario === 'Alternative'
+        );
+
+    const monthCategoryCost = {};
+
+    altRows.forEach(r => {
+
+        if (!r.bulan || !r.tahun) return;
+
+        const monthKey =
+            `${r.tahun}-${String(r.bulan).padStart(2, '0')}`;
+
+        if (!monthCategoryCost[monthKey]) {
+
+            monthCategoryCost[monthKey] = {
+
+                tahun: r.tahun,
+
+                bulan: r.bulan,
+
+                periode:
+                    BULAN_NAMES[
+                        r.bulan - 1
+                    ],
+
+                kategori: {}
+
+            };
+
+        }
+
+        if (
+            !monthCategoryCost[monthKey]
+                .kategori[r.kategori]
+        ) {
+
+            monthCategoryCost[monthKey]
+                .kategori[r.kategori] = 0;
+
+        }
+
+        monthCategoryCost[monthKey]
+            .kategori[r.kategori] +=
+            r.total_cost;
+
+    });
+
+    const months =
+        Object.values(monthCategoryCost)
+        .sort((a, b) => {
+
+            if (a.tahun !== b.tahun) {
+
+                return (
+                    a.tahun -
+                    b.tahun
+                );
+
+            }
+
+            return (
+                a.bulan -
+                b.bulan
+            );
+
+        });
+
+    const categories =
+        [
+            ...new Set(
+                months.flatMap(
+                    m =>
+                        Object.keys(
+                            m.kategori
+                        )
+                )
+            )
+        ];
+
+    const savingByCategory = {};
+
+    categories.forEach(cat => {
+
+        savingByCategory[cat] = [];
+
+        months.forEach((month, idx) => {
+
+            if (idx === 0) {
+
+                savingByCategory[cat]
+                    .push(0);
+
+                return;
+
+            }
+
+            const prevCost =
+                months[idx - 1]
+                    .kategori[cat] || 0;
+
+            const currCost =
+                month
+                    .kategori[cat] || 0;
+
+            savingByCategory[cat]
+                .push(
+                    prevCost -
+                    currCost
+                );
+
+        });
+
+    });
+
+    return {
+
+        months,
+
+        categories,
+
+        savingByCategory
+
+    };
+
+}
+
+function renderActualSavingCards() {
+
+    const {
+        months,
+        categories,
+        savingByCategory
+    } = getActualSavingByCategory();
+
+    const monthlyTotal = [];
+
+    months.forEach((m, idx) => {
+
+        let total = 0;
+
+        categories.forEach(cat => {
+
+            total +=
+                savingByCategory[cat][idx] || 0;
+
+        });
+
+        monthlyTotal.push({
+            periode: m.periode,
+            value: total
+        });
+
+    });
+
+    const ytd =
+        monthlyTotal.reduce(
+            (s, r) =>
+                s + r.value,
+            0
+        );
+
+    const best =
+        [...monthlyTotal]
+        .sort(
+            (a, b) =>
+                b.value -
+                a.value
+        )[0];
+
+    const avg =
+        monthlyTotal.length
+            ? ytd /
+              monthlyTotal.length
+            : 0;
+
+    $('#actual-saving-ytd')
+        .text(
+            formatIDR(ytd)
+        );
+
+    $('#actual-saving-best-month')
+        .text(
+            best
+                ? best.periode
+                : '-'
+        );
+
+    $('#actual-saving-avg')
+        .text(
+            formatIDR(avg)
+        );
+
+}
+
+function renderActualSavingChart() {
+
+    const {
+        months,
+        categories,
+        savingByCategory
+    } = getActualSavingByCategory();
+
+    destroyChart('actualSaving');
+
+    const series = categories.map(cat => ({
+
+        name: cat,
+
+        data: savingByCategory[cat]
+
+    }));
+
+    const options = {
+
+        chart: {
+
+            type: 'bar',
+
+            height: 450,
+
+            stacked: true,
+
+            toolbar: {
+                show: false
+            },
+
+            background: '#ffffff',
+
+            fontFamily:
+                'Plus Jakarta Sans, sans-serif',
+
+            parentHeightOffset: 0
+
+        },
+
+        series,
+
+        colors: [
+            '#1d4ed8',
+            '#0891b2',
+            '#7c3aed',
+            '#10b981',
+            '#f59e0b',
+            '#ef4444',
+            '#ec4899',
+            '#6366f1'
+        ],
+
+        title: {
+            text: undefined
+        },
+
+        dataLabels: {
+
+            enabled: true,
+
+            formatter(value) {
+
+                if (
+                    value === null ||
+                    value === undefined ||
+                    Math.abs(value) < 10000
+                ) {
+                    return '';
+                }
+
+                return formatIDR(value);
+
+            },
+
+            style: {
+
+                fontSize: '10px',
+
+                fontWeight: 700,
+
+                colors: ['#ffffff']
+
+            },
+
+            dropShadow: {
+                enabled: false
+            }
+
+        },
+
+        xaxis: {
+
+            categories:
+                months.map(
+                    m => m.periode
+                ),
+
+            labels: {
+
+                style: {
+
+                    colors: '#64748b',
+
+                    fontSize: '12px',
+
+                    fontWeight: 500
+
+                }
+
+            },
+
+            axisBorder: {
+                show: false
+            },
+
+            axisTicks: {
+                show: false
+            }
+
+        },
+
+        yaxis: {
+
+            labels: {
+
+                formatter(value) {
+
+                    return formatIDR(value);
+
+                },
+
+                style: {
+
+                    colors: '#64748b'
+
+                }
+
+            },
+
+            title: {
+
+                text: 'Actual Saving',
+
+                style: {
+
+                    color: '#475569',
+
+                    fontWeight: 600
+
+                }
+
+            }
+
+        },
+
+        legend: {
+
+            position: 'bottom',
+
+            fontSize: '12px',
+
+            labels: {
+
+                colors:
+                    '#475569'
+
+            }
+
+        },
+
+        grid: {
+
+            borderColor:
+                '#e2e8f0',
+
+            strokeDashArray:
+                3
+
+        },
+
+        tooltip: {
+
+            shared: true,
+
+            intersect: false,
+
+            theme: 'light',
+
+            custom: function({
+                series,
+                dataPointIndex,
+                w
+            }) {
+
+                const bulan =
+                    months[dataPointIndex]?.periode || '';
+
+                let total = 0;
+
+                let html = `
+
+                    <div
+                        style="
+                            padding:12px;
+                            min-width:240px;
+                            background:#ffffff;
+                        ">
+
+                        <div
+                            style="
+                                font-weight:700;
+                                margin-bottom:10px;
+                                color:#0f172a;
+                                font-size:13px;
+                            ">
+
+                            ${bulan}
+
+                        </div>
+
+                `;
+
+                w.config.series.forEach((s, idx) => {
+
+                    const value =
+                        series[idx][dataPointIndex] || 0;
+
+                    total += value;
+
+                    html += `
+
+                        <div
+                            style="
+                                display:flex;
+                                justify-content:space-between;
+                                align-items:center;
+                                gap:12px;
+                                margin-bottom:4px;
+                                font-size:12px;
+                            ">
+
+                            <div>
+
+                                <span
+                                    style="
+                                        color:${w.globals.colors[idx]};
+                                        font-size:13px;
+                                    ">
+
+                                    ●
+
+                                </span>
+
+                                ${s.name}
+
+                            </div>
+
+                            <div
+                                style="
+                                    font-weight:600;
+                                    color:#334155;
+                                ">
+
+                                ${formatIDR(value)}
+
+                            </div>
+
+                        </div>
+
+                    `;
+
+                });
+
+                html += `
+
+                    <hr
+                        style="
+                            margin:8px 0;
+                            border:none;
+                            border-top:1px solid #e2e8f0;
+                        ">
+
+                    <div
+                        style="
+                            display:flex;
+                            justify-content:space-between;
+                            align-items:center;
+                            font-weight:700;
+                            color:#0f172a;
+                            font-size:13px;
+                        ">
+
+                        <span>Total</span>
+
+                        <span>
+
+                            ${formatIDR(total)}
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+                `;
+
+                return html;
+
+            }
+
+        },
+
+        plotOptions: {
+
+            bar: {
+
+                horizontal: false,
+
+                borderRadius: 4,
+
+                columnWidth: '55%',
+
+                dataLabels: {
+
+                    total: {
+
+                        enabled: true,
+
+                        offsetY: -10,
+
+                        style: {
+
+                            fontSize: '12px',
+
+                            fontWeight: 700,
+
+                            color: '#0f172a'
+
+                        },
+
+                        formatter(total) {
+
+                            return formatIDR(
+                                total
+                            );
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        },
+
+        states: {
+
+            hover: {
+
+                filter: {
+
+                    type: 'lighten',
+
+                    value: 0.05
+
+                }
+
+            }
+
+        },
+
+        responsive: [
+
+            {
+
+                breakpoint: 768,
+
+                options: {
+
+                    chart: {
+
+                        height: 380
+
+                    },
+
+                    dataLabels: {
+
+                        enabled: false
+
+                    }
+
+                }
+
+            }
+
+        ]
+
+    };
+
+    APP.charts.actualSaving =
+        new ApexCharts(
+            document.getElementById(
+                'chart-actual-saving'
+            ),
+            options
+        );
+
+    APP.charts.actualSaving.render();
+
+}
+
 // ===== RENDER TOP MATERIAL CHART =====
 function renderTopMaterialChart() {
 
@@ -3590,6 +4203,9 @@ function renderDashboard() {
     renderTopSavingChart();
     renderTopMaterialChart();
     renderMonthlySavingChart()
+  } else if (activeTab === 'saving') {
+    renderActualSavingCards();
+    renderActualSavingChart();
   } else if (activeTab === 'category') {
     renderCategoryCards();
   } else if (activeTab === 'hopper') {
