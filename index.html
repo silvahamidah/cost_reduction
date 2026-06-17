@@ -855,11 +855,29 @@
 <!-- ===== NAVIGATION TABS ===== -->
 <div class="max-w-screen-2xl mx-auto px-6 pt-4">
   <div class="flex gap-2 p-1.5 rounded-xl inline-flex" style="background: #e8edf5;">
-    <button class="nav-tab active" onclick="switchTab('overview')"><i class="fas fa-chart-pie mr-1.5"></i>Overview</button>
-    <button class="nav-tab" onclick="switchTab('category')"><i class="fas fa-layer-group mr-1.5"></i>Per Kategori</button>
-    <button class="nav-tab" onclick="switchTab('hopper')"><i class="fas fa-layer-group mr-1.5"></i>Per Hopper</button>
-    <button class="nav-tab" onclick="switchTab('ng')"><i class="fas fa-triangle-exclamation mr-1.5"></i>NG Analysis</button>
-    <button class="nav-tab" onclick="switchTab('material')"><i class="fas fa-cubes mr-1.5"></i>Material Usage</button>
+    <button class="nav-tab active" onclick="switchTab('overview')">
+      <i class="fas fa-chart-pie mr-1.5"></i>Overview
+    </button>
+
+    <button class="nav-tab" onclick="switchTab('saving')">
+        <i class="fas fa-coins mr-1.5"></i>Cost Saving MoM
+    </button>
+
+    <button class="nav-tab" onclick="switchTab('category')">
+      <i class="fas fa-layer-group mr-1.5"></i>Per Kategori
+    </button>
+
+    <button class="nav-tab" onclick="switchTab('hopper')">
+      <i class="fas fa-boxes-stacked mr-1.5"></i>Per Hopper
+    </button>
+
+    <button class="nav-tab" onclick="switchTab('ng')">
+      <i class="fas fa-triangle-exclamation mr-1.5"></i>NG Analysis
+    </button>
+
+    <button class="nav-tab" onclick="switchTab('material')">
+      <i class="fas fa-cubes mr-1.5"></i>Material Usage
+    </button>
   </div>
 </div>
 
@@ -952,6 +970,99 @@
         </div>
 
     </div>
+  </div>
+
+  <!-- ====================== CONTAINER: ACTUAL SAVING ====================== -->
+  <div id="tab-saving" class="section-container">
+
+      <!-- KPI -->
+      <div class="grid grid-cols-12 gap-4 mb-4">
+
+          <div class="col-span-12 lg:col-span-4">
+
+              <div class="glass-card p-4">
+
+                  <div class="text-sm text-slate-500">
+                      Actual Saving (YTD)
+                  </div>
+
+                  <div
+                      id="actual-saving-ytd"
+                      class="text-4xl font-bold text-emerald-600 mt-2">
+
+                      Rp 0
+
+                  </div>
+
+              </div>
+
+          </div>
+
+          <div class="col-span-12 lg:col-span-4">
+
+              <div class="glass-card p-4">
+
+                  <div class="text-sm text-slate-500">
+                      Best Month
+                  </div>
+
+                  <div
+                      id="actual-saving-best-month"
+                      class="text-4xl font-bold text-blue-600 mt-2">
+
+                      -
+
+                  </div>
+
+              </div>
+
+          </div>
+
+          <div class="col-span-12 lg:col-span-4">
+
+              <div class="glass-card p-4">
+
+                  <div class="text-sm text-slate-500">
+                      Average Saving / Month
+                  </div>
+
+                  <div
+                      id="actual-saving-avg"
+                      class="text-4xl font-bold text-purple-600 mt-2">
+
+                      Rp 0
+
+                  </div>
+
+              </div>
+
+          </div>
+
+      </div>
+
+      <!-- MAIN CHART -->
+
+      <div class="glass-card p-4 mb-4">
+
+          <div class="section-header">
+
+              <i class="fas fa-chart-line text-green-600"></i>
+
+              Actual Saving Trend (MoM)
+
+          </div>
+
+          <div id="chart-actual-saving">
+
+              <div
+                  class="skeleton"
+                  style="height:450px;">
+              </div>
+
+          </div>
+
+      </div>
+
   </div>
 
   <!-- ====================== CONTAINER: KATEGORI MATERIAL ====================== -->
