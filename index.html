@@ -630,6 +630,92 @@
         width:100% !important;
       }
     }
+
+    #kpi-container .kpi-card {
+        min-height: 90px;
+    }
+
+    .kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    @media (max-width: 1024px) {
+        .kpi-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .kpi-grid {
+            grid-template-columns: repeat(1, minmax(0, 1fr));
+        }
+    }
+
+    /* =========================================
+      GLOBAL COMPARE TOGGLE
+    ========================================= */
+
+    .global-compare-btn {
+
+        background: transparent;
+
+        color: #64748b;
+
+        font-weight: 600;
+
+        transition: all .2s ease;
+
+        border: none;
+
+        min-width: 120px;
+
+    }
+
+    .global-compare-btn:hover {
+
+        background: #f8fafc;
+
+        color: #334155;
+
+    }
+
+    .global-compare-btn.active {
+
+        background: #2563eb;
+
+        color: #ffffff;
+
+        box-shadow:
+            inset 0 1px 0 rgba(255,255,255,.2);
+
+    }
+
+    .global-compare-btn:not(:last-child) {
+
+        border-right:
+            1px solid #e2e8f0;
+
+    }
+
+    /* =========================================
+      MOBILE
+    ========================================= */
+
+    @media (max-width: 768px) {
+
+        .global-compare-btn {
+
+            min-width: auto;
+
+            padding-left: 12px;
+
+            padding-right: 12px;
+
+            font-size: 12px;
+
+        }
+
+    }
   </style>
 </head>
 
@@ -812,6 +898,7 @@
                   class="filter-multi">
             <option value="Standard">Standard</option>
             <option value="Alternative">Alternative</option>
+            <option value="AHM Beli">AHM Beli</option>
           </select>
         </div>
 
@@ -854,31 +941,120 @@
 
 <!-- ===== NAVIGATION TABS ===== -->
 <div class="max-w-screen-2xl mx-auto px-6 pt-4">
-  <div class="flex gap-2 p-1.5 rounded-xl inline-flex" style="background: #e8edf5;">
-    <button class="nav-tab active" onclick="switchTab('overview')">
-      <i class="fas fa-chart-pie mr-1.5"></i>Overview
-    </button>
 
-    <button class="nav-tab" onclick="switchTab('saving')">
-        <i class="fas fa-coins mr-1.5"></i>Cost Saving MoM
-    </button>
+    <div class="flex items-center justify-between flex-wrap gap-3">
 
-    <button class="nav-tab" onclick="switchTab('category')">
-      <i class="fas fa-layer-group mr-1.5"></i>Per Kategori
-    </button>
+        <!-- TAB MENU -->
 
-    <button class="nav-tab" onclick="switchTab('hopper')">
-      <i class="fas fa-boxes-stacked mr-1.5"></i>Per Hopper
-    </button>
+        <div
+            class="flex gap-2 p-1.5 rounded-xl inline-flex"
+            style="background:#e8edf5;">
 
-    <button class="nav-tab" onclick="switchTab('ng')">
-      <i class="fas fa-triangle-exclamation mr-1.5"></i>NG Analysis
-    </button>
+            <button
+                class="nav-tab active"
+                onclick="switchTab('overview')">
 
-    <button class="nav-tab" onclick="switchTab('material')">
-      <i class="fas fa-cubes mr-1.5"></i>Material Usage
-    </button>
-  </div>
+                <i class="fas fa-chart-pie mr-1.5"></i>
+
+                Overview
+
+            </button>
+
+            <button
+                class="nav-tab"
+                onclick="switchTab('saving')">
+
+                <i class="fas fa-coins mr-1.5"></i>
+
+                Cost Saving MoM
+
+            </button>
+
+            <button
+                class="nav-tab"
+                onclick="switchTab('category')">
+
+                <i class="fas fa-layer-group mr-1.5"></i>
+
+                Per Kategori
+
+            </button>
+
+            <button
+                class="nav-tab"
+                onclick="switchTab('hopper')">
+
+                <i class="fas fa-boxes-stacked mr-1.5"></i>
+
+                Per Hopper
+
+            </button>
+
+            <button
+                class="nav-tab"
+                onclick="switchTab('ng')">
+
+                <i class="fas fa-triangle-exclamation mr-1.5"></i>
+
+                NG Analysis
+
+            </button>
+
+            <button
+                class="nav-tab"
+                onclick="switchTab('material')">
+
+                <i class="fas fa-cubes mr-1.5"></i>
+
+                Material Usage
+
+            </button>
+
+        </div>
+
+        <!-- GLOBAL COMPARE MODE -->
+        <div
+            class="
+                inline-flex
+                rounded-xl
+                border
+                border-slate-200
+                overflow-hidden
+                bg-white
+                shadow-sm
+            ">
+
+            <button
+                id="btn-global-standard"
+                class="
+                    global-compare-btn
+                    active
+                    px-4
+                    py-2
+                    text-sm
+                ">
+
+                Std vs Alt
+
+            </button>
+
+            <button
+                id="btn-global-ahm"
+                class="
+                    global-compare-btn
+                    px-4
+                    py-2
+                    text-sm
+                ">
+
+                AHM vs Alt
+
+            </button>
+
+        </div>
+
+    </div>
+
 </div>
 
 <!-- ===== MAIN CONTENT ===== -->
@@ -886,56 +1062,162 @@
 
   <!-- ====================== CONTAINER: OVERVIEW ====================== -->
   <div id="tab-overview" class="section-container active">
-    <div class="grid grid-cols-12 gap-4">
+    <div class="space-y-4">
 
-      <!-- KPI Cards (left) -->
-      <div class="col-span-12 lg:col-span-2">
-        <div class="grid grid-cols-1 gap-3" id="kpi-container">
-          <div class="kpi-card blue skeleton" style="height: 90px;"></div>
-          <div class="kpi-card cyan skeleton" style="height: 90px;"></div>
-          <div class="kpi-card green skeleton" style="height: 90px;"></div>
-          <div class="kpi-card orange skeleton" style="height: 90px;"></div>
-          <div class="kpi-card red skeleton" style="height: 90px;"></div>
-        </div>
-      </div>
+        <!-- ================================================= -->
+        <!-- OVERVIEW -->
+        <!-- ================================================= -->
 
-      <!-- Cost Comparison Chart (center) -->
-      <div class="col-span-12 lg:col-span-5">
-        <div class="glass-card p-4 h-full">
-          <div class="flex items-center justify-between mb-3">
-            <div class="section-header" style="margin-bottom:0;">
-              <i class="fas fa-chart-bar text-blue-600"></i> Cost Comparison
+        <div class="glass-card p-4">
+
+            <div class="section-header mb-4">
+
+                <i class="fas fa-gauge-high text-blue-600 mr-2"></i>
+
+                Overview
+
             </div>
-            <div class="flex gap-1">
-              <button class="toggle-btn active" id="btn-comparison-nominal" onclick="toggleComparison('nominal')">Nominal</button>
-              <button class="toggle-btn" id="btn-comparison-pct" onclick="toggleComparison('pct')">%</button>
-            </div>
-          </div>
-          <div id="chart-comparison" style="min-height: 360px;">
-            <div class="skeleton" style="height:360px;"></div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Top All Parts Chart (right) — no toggle buttons, scrollable -->
-      <div class="col-span-12 lg:col-span-5">
-        <div class="glass-card p-4 h-full">
-          <div id="chart-top-saving">
-            <div class="skeleton" style="height:360px;"></div>
-          </div>
+            <div
+                id="kpi-container"
+                class="grid gap-3 kpi-grid">
+
+                <div class="kpi-card blue skeleton" style="height:90px;"></div>
+                <div class="kpi-card cyan skeleton" style="height:90px;"></div>
+                <div class="kpi-card green skeleton" style="height:90px;"></div>
+                <div class="kpi-card orange skeleton" style="height:90px;"></div>
+
+                <div class="kpi-card red skeleton" style="height:90px;"></div>
+                <div class="kpi-card blue skeleton" style="height:90px;"></div>
+                <div class="kpi-card cyan skeleton" style="height:90px;"></div>
+                <div class="kpi-card green skeleton" style="height:90px;"></div>
+
+            </div>
+
         </div>
-      </div>
+
+        <!-- ================================================= -->
+        <!-- CHARTS -->
+        <!-- ================================================= -->
+
+        <div class="grid grid-cols-12 gap-4">
+
+            <!-- ============================================= -->
+            <!-- COST COMPARISON -->
+            <!-- ============================================= -->
+
+            <div class="col-span-12 lg:col-span-6">
+
+                <div class="glass-card p-4 h-full">
+
+                    <div class="flex items-center justify-between mb-3">
+
+                        <div
+                            class="section-header"
+                            style="margin-bottom:0;">
+
+                            <i class="fas fa-chart-bar text-blue-600 mr-2"></i>
+
+                            Cost Comparison
+
+                        </div>
+
+                        <div class="flex gap-1">
+
+                            <button
+                                class="toggle-btn active"
+                                id="btn-comparison-nominal"
+                                onclick="toggleComparison('nominal')">
+
+                                Nominal
+
+                            </button>
+
+                            <button
+                                class="toggle-btn"
+                                id="btn-comparison-pct"
+                                onclick="toggleComparison('pct')">
+
+                                %
+
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div
+                        id="chart-comparison"
+                        style="min-height:360px;">
+
+                        <div
+                            class="skeleton"
+                            style="height:360px;">
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- ============================================= -->
+            <!-- TOP SAVING PART -->
+            <!-- ============================================= -->
+
+            <div class="col-span-12 lg:col-span-6">
+
+                <div class="glass-card p-4 h-full">
+
+                    <div class="flex items-center justify-between mb-4">
+
+                        <div
+                            class="section-header"
+                            style="margin-bottom:0;">
+
+                            <i class="fas fa-ranking-star text-amber-500 mr-2"></i>
+
+                            Top Saving Part
+
+                        </div>
+                    </div>
+
+                    <div id="chart-top-saving">
+
+                        <div
+                            class="skeleton"
+                            style="height:360px;">
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
 
     </div>
     <!-- ROW 2 -->
-
     <div class="grid grid-cols-12 gap-4 mt-4">
 
         <!-- ALL MATERIAL -->
-
         <div class="col-span-12 lg:col-span-5">
 
             <div class="glass-card p-4 h-full">
+
+                <div class="flex items-center justify-between mb-4">
+
+                    <div
+                        class="section-header"
+                        style="margin-bottom:0;">
+
+                        <i class="fas fa-cubes text-indigo-600 mr-2"></i>
+
+                        Top Saving Material
+
+                    </div>
+                </div>
 
                 <div id="chart-top-material">
 
