@@ -20,6 +20,59 @@ const APP = {
   fileName: '',
 };
 
+APP.compareMode = APP.compareMode || 'standard';
+$('#btn-global-standard').on(
+    'click',
+    function () {
+
+        if (
+            APP.compareMode === 'standard'
+        ) {
+            return;
+        }
+
+        APP.compareMode =
+            'standard';
+
+        $('.global-compare-btn')
+            .removeClass('active');
+
+        $(this)
+            .addClass('active');
+
+        renderTopSavingChart();
+        renderTopMaterialChart()
+        renderCategoryCards() 
+        renderHopperCards()
+    }
+);
+$('#btn-global-ahm').on(
+    'click',
+    function () {
+
+        if (
+            APP.compareMode === 'ahm'
+        ) {
+            return;
+        }
+
+        APP.compareMode =
+            'ahm';
+
+        $('.global-compare-btn')
+            .removeClass('active');
+
+        $(this)
+            .addClass('active');
+
+        renderTopSavingChart();
+        renderTopMaterialChart()
+        renderCategoryCards() 
+        renderHopperCards()
+
+    }
+);
+
 const BULAN_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
 const CATEGORY_COLORS = ['#1d4ed8','#0891b2','#7c3aed','#059669','#d97706','#db2777','#dc2626','#84cc16'];
 
@@ -291,388 +344,876 @@ function applyFilters() {
 
 // ===== CALCULATE OVERVIEW =====
 function calculateOverview() {
-  const std = APP.filteredData.filter(r => r.scenario === 'Standard');
-  const alt = APP.filteredData.filter(r => r.scenario === 'Alternative');
 
-  const totalStd = std.reduce((s, r) => s + r.total_cost, 0);
-  const totalAlt = alt.reduce((s, r) => s + r.total_cost, 0);
-  const totalSaving = totalStd - totalAlt;
-  const pctSaving = totalStd !== 0 ? (totalSaving / totalStd) * 100 : 0;
-  const totalNG = APP.filteredData.reduce((s, r) => s + r.ng_loss, 0);
+    const std =
+        APP.filteredData.filter(
+            r => r.scenario === 'Standard'
+        );
 
-  return { totalStd, totalAlt, totalSaving, pctSaving, totalNG };
+    const ahm =
+        APP.filteredData.filter(
+            r => r.scenario === 'AHM Beli'
+        );
+
+    const alt =
+        APP.filteredData.filter(
+            r => r.scenario === 'Alternative'
+        );
+
+    const totalStd =
+        std.reduce(
+            (s, r) => s + r.total_cost,
+            0
+        );
+
+    const totalAhm =
+        ahm.reduce(
+            (s, r) => s + r.total_cost,
+            0
+        );
+
+    const totalAlt =
+        alt.reduce(
+            (s, r) => s + r.total_cost,
+            0
+        );
+
+    // Saving karena harga AHM
+    const savingAhm =
+        totalStd - totalAhm;
+
+    // Saving karena cost reduction
+    const savingAlt =
+        totalAhm - totalAlt;
+
+    // Total impact keseluruhan
+    const totalSaving =
+        totalStd - totalAlt;
+
+    const pctSaving =
+        totalStd > 0
+            ? (totalSaving / totalStd) * 100
+            : 0;
+
+    const totalNG =
+        APP.filteredData.reduce(
+            (s, r) => s + r.ng_loss,
+            0
+        );
+
+    return {
+
+        totalStd,
+
+        totalAhm,
+
+        totalAlt,
+
+        savingAhm,
+
+        savingAlt,
+
+        totalSaving,
+
+        pctSaving,
+
+        totalNG
+
+    };
+
 }
 
 // ===== RENDER KPI CARDS =====
 function renderCards() {
-  const { totalStd, totalAlt, totalSaving, pctSaving, totalNG } = calculateOverview();
-  const isSaving = totalSaving >= 0;
-  const savingClass = isSaving ? 'green' : 'red';
-  const savingColor = isSaving ? '#10b981' : '#ef4444';
 
-  const kpis = [
-    {
-      title: 'Total Cost Standard', val: formatIDR(totalStd), color: 'blue',
-      icon: 'fas fa-circle-dollar-to-slot', iconColor: '#1d4ed8', bg: '#eff6ff',
-      sub: 'Scenario Standard',
-    },
-    {
-      title: 'Total Cost Alternative', val: formatIDR(totalAlt), color: 'cyan',
-      icon: 'fas fa-arrows-rotate', iconColor: '#0891b2', bg: '#ecfeff',
-      sub: 'Scenario Alternative',
-    },
-    {
-      title: 'Total Saving', val: formatIDR(totalSaving), color: savingClass,
-      icon: isSaving ? 'fas fa-piggy-bank' : 'fas fa-arrow-trend-down',
-      iconColor: savingColor, bg: isSaving ? '#f0fdf4' : '#fef2f2',
-      sub: isSaving ? 'Cost berhasil ditekan' : '🔴 Biaya meningkat',
-    },
-    {
-      title: '% Saving', val: formatPct(pctSaving), color: savingClass,
-      icon: 'fas fa-percent', iconColor: savingColor, bg: isSaving ? '#f0fdf4' : '#fef2f2',
-      sub: 'Relative to Standard',
-    },
-    {
-      title: 'Total NG Loss', val: formatIDR(totalNG), color: 'orange',
-      icon: 'fas fa-triangle-exclamation', iconColor: '#f59e0b', bg: '#fffbeb',
-      sub: 'Kerugian produk NG',
-    },
-  ];
+    const {
+        totalStd,
+        totalAhm,
+        totalAlt,
+        savingAhm,
+        savingAlt,
+        totalSaving,
+        pctSaving,
+        totalNG
+    } = calculateOverview();
 
-  const container = document.getElementById('kpi-container');
-  container.innerHTML = kpis.map((k, i) => `
-    <div class="kpi-card ${k.color} fade-in fade-in-delay-${i+1}">
-      <div class="flex items-start justify-between">
-        <div class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${k.bg};">
-          <i class="${k.icon}" style="color:${k.iconColor}; font-size:16px;"></i>
+    const isTotalSaving = totalSaving >= 0;
+
+    const kpis = [
+
+        {
+            title: 'Total Cost Standard',
+            val: formatIDR(totalStd),
+            color: 'blue',
+            icon: 'fas fa-circle-dollar-to-slot',
+            iconColor: '#1d4ed8',
+            bg: '#eff6ff',
+            sub: 'Material Original - Harga Actual'
+        },
+
+        {
+            title: 'Total Cost AHM',
+            val: formatIDR(totalAhm),
+            color: 'blue',
+            icon: 'fas fa-handshake',
+            iconColor: '#4f46e5',
+            bg: '#eef2ff',
+            sub: 'Material Original - Harga AHM'
+        },
+
+        {
+            title: 'Total Cost Alternative',
+            val: formatIDR(totalAlt),
+            color: 'cyan',
+            icon: 'fas fa-arrows-rotate',
+            iconColor: '#0891b2',
+            bg: '#ecfeff',
+            sub: 'Material Cost Reduction'
+        },
+
+        {
+            title: 'Saving Harga AHM',
+            val: formatIDR(savingAhm),
+            color: savingAhm >= 0 ? 'green' : 'red',
+            icon: savingAhm >= 0
+                ? 'fas fa-tags'
+                : 'fas fa-arrow-trend-up',
+            iconColor: savingAhm >= 0
+                ? '#10b981'
+                : '#ef4444',
+            bg: savingAhm >= 0
+                ? '#f0fdf4'
+                : '#fef2f2',
+            sub: 'Standard → AHM'
+        },
+
+        {
+            title: 'Saving Cost Reduction',
+            val: formatIDR(savingAlt),
+            color: savingAlt >= 0 ? 'green' : 'red',
+            icon: savingAlt >= 0
+                ? 'fas fa-screwdriver-wrench'
+                : 'fas fa-arrow-trend-up',
+            iconColor: savingAlt >= 0
+                ? '#10b981'
+                : '#ef4444',
+            bg: savingAlt >= 0
+                ? '#f0fdf4'
+                : '#fef2f2',
+            sub: 'AHM → Alternative'
+        },
+
+        {
+            title: 'Total Saving',
+            val: formatIDR(totalSaving),
+            color: isTotalSaving ? 'green' : 'red',
+            icon: isTotalSaving
+                ? 'fas fa-coins'
+                : 'fas fa-arrow-trend-down',
+            iconColor: isTotalSaving
+                ? '#10b981'
+                : '#ef4444',
+            bg: isTotalSaving
+                ? '#f0fdf4'
+                : '#fef2f2',
+            sub: 'Standard → Alternative'
+        },
+
+        {
+            title: '% Total Saving',
+            val: formatPct(pctSaving),
+            color: isTotalSaving ? 'green' : 'red',
+            icon: 'fas fa-percent',
+            iconColor: isTotalSaving
+                ? '#10b981'
+                : '#ef4444',
+            bg: isTotalSaving
+                ? '#f0fdf4'
+                : '#fef2f2',
+            sub: 'vs Standard'
+        },
+
+        {
+            title: 'Total NG Loss',
+            val: formatIDR(totalNG),
+            color: 'orange',
+            icon: 'fas fa-triangle-exclamation',
+            iconColor: '#f59e0b',
+            bg: '#fffbeb',
+            sub: 'Kerugian Produk NG'
+        }
+
+    ];
+
+    const container =
+        document.getElementById(
+            'kpi-container'
+        );
+
+    container.innerHTML =
+        kpis.map((k, i) => `
+
+        <div class="kpi-card ${k.color} fade-in fade-in-delay-${(i % 5) + 1}">
+
+            <div class="flex items-start justify-between">
+
+                <div
+                    class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style="background:${k.bg};">
+
+                    <i
+                        class="${k.icon}"
+                        style="
+                            color:${k.iconColor};
+                            font-size:16px;
+                        ">
+                    </i>
+
+                </div>
+
+                <div class="text-right flex-1 ml-2">
+
+                    <div
+                        class="
+                            text-xs
+                            font-semibold
+                            text-slate-500
+                            mb-0.5
+                        ">
+
+                        ${k.title}
+
+                    </div>
+
+                    <div
+                        class="
+                            font-mono
+                            font-bold
+                            text-slate-800
+                            leading-tight
+                        "
+                        style="font-size:15px;">
+
+                        ${k.val}
+
+                    </div>
+
+                    <div
+                        class="
+                            text-xs
+                            text-slate-400
+                            mt-0.5
+                        ">
+
+                        ${k.sub}
+
+                    </div>
+
+                </div>
+
+            </div>
+
         </div>
-        <div class="text-right flex-1 ml-2">
-          <div class="text-xs font-semibold text-slate-500 mb-0.5">${k.title}</div>
-          <div class="font-mono font-bold text-slate-800 leading-tight" style="font-size:15px;">${k.val}</div>
-          <div class="text-xs text-slate-400 mt-0.5">${k.sub}</div>
-        </div>
-      </div>
-    </div>
-  `).join('');
+
+    `).join('');
+
 }
 
 // ===== RENDER COMPARISON CHART =====
 function renderComparisonChart() {
-  const std = APP.filteredData.filter(r => r.scenario === 'Standard');
-  const alt = APP.filteredData.filter(r => r.scenario === 'Alternative');
-  const totalStd = std.reduce((s, r) => s + r.total_cost, 0);
-  const totalAlt = alt.reduce((s, r) => s + r.total_cost, 0);
-  const saving = totalStd - totalAlt;
 
-  destroyChart('comparison');
+    const {
+        totalStd,
+        totalAhm,
+        totalAlt,
+        savingAhm,
+        savingAlt,
+        totalSaving
+    } = calculateOverview();
 
-  const isNominal = APP.comparisonMode === 'nominal';
-  let seriesData;
+    destroyChart('comparison');
 
-  if (isNominal) {
-    seriesData = [
-      { x: 'Cost Standard', y: Math.round(totalStd), fillColor: '#1d4ed8' },
-      { x: 'Cost Alternative', y: Math.round(totalAlt), fillColor: '#0891b2' },
-      { x: 'Total Saving', y: Math.round(saving), fillColor: saving >= 0 ? '#10b981' : '#ef4444' },
-    ];
-  } else {
-    const pctAlt = totalStd > 0 ? (totalAlt / totalStd) * 100 : 0;
-    const pctSaving = totalStd > 0 ? ((totalStd - totalAlt) / totalStd) * 100 : 0;
-    seriesData = [
-      { x: 'Cost Standard', y: 100, fillColor: '#1d4ed8' },
-      { x: 'Cost Alternative', y: +pctAlt.toFixed(2), fillColor: '#0891b2' },
-      { x: 'Saving', y: +pctSaving.toFixed(2), fillColor: pctSaving >= 0 ? '#10b981' : '#ef4444' },
-    ];
-  }
+    const isNominal =
+        APP.comparisonMode === 'nominal';
 
-  const opts = {
-    series: [{ name: 'Value', data: seriesData }],
-    chart: {
-      type: 'bar',
-      height: 360,
-      toolbar: { show: false },
-      animations: { enabled: true, easing: 'easeinout', speed: 600 },
-      fontFamily: 'Plus Jakarta Sans, sans-serif',
-    },
-    plotOptions: {
-      bar: {
-        horizontal: true,
-        distributed: true,
-        borderRadius: 8,
-        barHeight: '50%',
-        dataLabels: { position: 'top' },
-      }
-    },
-    dataLabels: {
-      enabled: true,
-      formatter: v => isNominal ? formatIDR(v) : v.toFixed(1) + '%',
-      style: { fontSize: '12px', fontWeight: '700', colors: ['#1e293b'] },
-      offsetX: 5,
-    },
-    legend: { show: false },
-    tooltip: {
-      y: { formatter: v => isNominal ? formatIDR(v, true) : v.toFixed(2) + '%' }
-    },
-    xaxis: {
-      labels: { formatter: v => isNominal ? formatIDR(v) : v + '%', style: { fontSize: '11px', colors: '#94a3b8' } },
-      axisBorder: { show: false },
-      axisTicks: { show: false },
-    },
-    yaxis: { labels: { style: { fontSize: '12px', fontWeight: '600', colors: '#475569' } } },
-    grid: { borderColor: '#f1f5f9', strokeDashArray: 3 },
-    colors: seriesData.map(s => s.fillColor),
-  };
+    let seriesData;
 
-  APP.charts.comparison = new ApexCharts(document.getElementById('chart-comparison'), opts);
-  APP.charts.comparison.render();
+    if (isNominal) {
+
+        seriesData = [
+
+            {
+                x: 'Standard',
+                y: Math.round(totalStd),
+                fillColor: '#1d4ed8'
+            },
+
+            {
+                x: 'AHM Beli',
+                y: Math.round(totalAhm),
+                fillColor: '#7c3aed'
+            },
+
+            {
+                x: 'Alternative',
+                y: Math.round(totalAlt),
+                fillColor: '#0891b2'
+            }
+
+        ];
+
+    } else {
+
+        const pctAhm =
+            totalStd > 0
+                ? (totalAhm / totalStd) * 100
+                : 0;
+
+        const pctAlt =
+            totalStd > 0
+                ? (totalAlt / totalStd) * 100
+                : 0;
+
+        seriesData = [
+
+            {
+                x: 'Standard',
+                y: 100,
+                fillColor: '#1d4ed8'
+            },
+
+            {
+                x: 'AHM Beli',
+                y: +pctAhm.toFixed(2),
+                fillColor: '#7c3aed'
+            },
+
+            {
+                x: 'Alternative',
+                y: +pctAlt.toFixed(2),
+                fillColor: '#0891b2'
+            }
+
+        ];
+
+    }
+
+    const opts = {
+
+        series: [
+            {
+                name: 'Value',
+                data: seriesData
+            }
+        ],
+
+        chart: {
+            type: 'bar',
+            height: 360,
+            toolbar: {
+                show: false
+            },
+            animations: {
+                enabled: true,
+                easing: 'easeinout',
+                speed: 600
+            },
+            fontFamily:
+                'Plus Jakarta Sans, sans-serif'
+        },
+
+        plotOptions: {
+
+            bar: {
+
+                horizontal: true,
+
+                distributed: true,
+
+                borderRadius: 8,
+
+                barHeight: '50%',
+
+                dataLabels: {
+                    position: 'top'
+                }
+
+            }
+
+        },
+
+        dataLabels: {
+
+            enabled: true,
+
+            formatter: v =>
+                isNominal
+                    ? formatIDR(v)
+                    : v.toFixed(1) + '%',
+
+            style: {
+                fontSize: '12px',
+                fontWeight: '700',
+                colors: ['#1e293b']
+            },
+
+            offsetX: 5
+
+        },
+
+        legend: {
+            show: false
+        },
+
+        tooltip: {
+
+            custom: function({ dataPointIndex }) {
+
+                const labels = [
+                    {
+                        title: 'Standard',
+                        value: totalStd,
+                        note: 'Material Original - Harga Actual'
+                    },
+                    {
+                        title: 'AHM Beli',
+                        value: totalAhm,
+                        note: `Saving Harga AHM : ${formatIDR(savingAhm)}`
+                    },
+                    {
+                        title: 'Alternative',
+                        value: totalAlt,
+                        note: `Saving Cost Reduction : ${formatIDR(savingAlt)}`
+                    }
+                ];
+
+                const row =
+                    labels[dataPointIndex];
+
+                return `
+                    <div class="p-3">
+
+                        <div class="font-semibold mb-1">
+                            ${row.title}
+                        </div>
+
+                        <div>
+                            ${formatIDR(row.value, true)}
+                        </div>
+
+                        <div
+                            style="
+                                font-size:11px;
+                                color:#64748b;
+                                margin-top:4px;
+                            ">
+                            ${row.note}
+                        </div>
+
+                    </div>
+                `;
+            }
+
+        },
+
+        xaxis: {
+
+            labels: {
+
+                formatter: v =>
+                    isNominal
+                        ? formatIDR(v)
+                        : v + '%',
+
+                style: {
+                    fontSize: '11px',
+                    colors: '#94a3b8'
+                }
+
+            },
+
+            axisBorder: {
+                show: false
+            },
+
+            axisTicks: {
+                show: false
+            }
+
+        },
+
+        yaxis: {
+
+            labels: {
+
+                style: {
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    colors: '#475569'
+                }
+
+            }
+
+        },
+
+        grid: {
+            borderColor: '#f1f5f9',
+            strokeDashArray: 3
+        },
+
+        colors:
+            seriesData.map(
+                s => s.fillColor
+            )
+
+    };
+
+    APP.charts.comparison =
+        new ApexCharts(
+            document.getElementById(
+                'chart-comparison'
+            ),
+            opts
+        );
+
+    APP.charts.comparison.render();
+
 }
 
 // ===== RENDER TOP PART CHART (Bar with negative values, ALL parts, scrollable) =====
 function renderTopSavingChart() {
 
-  const byPart = {};
+    const byPart = {};
 
-  APP.filteredData.forEach(r => {
+    APP.filteredData.forEach(r => {
 
-    if (!byPart[r.part_name]) {
-      byPart[r.part_name] = {
-        std: 0,
-        alt: 0
-      };
+        if (!byPart[r.part_name]) {
+
+            byPart[r.part_name] = {
+                std: 0,
+                ahm: 0,
+                alt: 0
+            };
+
+        }
+
+        if (r.scenario === 'Standard')
+            byPart[r.part_name].std += r.total_cost;
+
+        if (r.scenario === 'AHM Beli')
+            byPart[r.part_name].ahm += r.total_cost;
+
+        if (r.scenario === 'Alternative')
+            byPart[r.part_name].alt += r.total_cost;
+
+    });
+
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const parts = Object.entries(byPart)
+        .map(([name, v]) => {
+
+            const saving =
+                isAhmMode
+                    ? (v.ahm - v.alt)
+                    : (v.std - v.alt);
+
+            return {
+                name,
+                saving
+            };
+
+        })
+        .sort((a, b) => b.saving - a.saving);
+
+    const container =
+        document.getElementById(
+            'chart-top-saving'
+        );
+
+    if (!parts.length) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="text-sm">
+                    Data belum tersedia
+                </div>
+            </div>
+        `;
+
+        return;
     }
 
-    if (r.scenario === 'Standard')
-      byPart[r.part_name].std += r.total_cost;
+    const totalSaving =
+        parts.reduce(
+            (sum, p) => sum + p.saving,
+            0
+        );
 
-    if (r.scenario === 'Alternative')
-      byPart[r.part_name].alt += r.total_cost;
-  });
+    const avgSaving =
+        totalSaving / parts.length;
 
-  const parts = Object.entries(byPart)
-    .map(([name, v]) => ({
-      name,
-      saving: v.std - v.alt
-    }))
-    .sort((a, b) => b.saving - a.saving);
+    const maxAbsSaving = Math.max(
+        ...parts.map(
+            p => Math.abs(p.saving)
+        ),
+        1
+    );
 
-  const container =
-    document.getElementById('chart-top-saving');
+    const compareTitle =
+        isAhmMode
+            ? 'AHM vs Alternative'
+            : 'Standard vs Alternative';
 
-  if (parts.length === 0) {
-    container.innerHTML =
-      '<div class="empty-state"><div class="text-sm">Data belum tersedia</div></div>';
-    return;
-  }
-
-  const totalSaving =
-    parts.reduce((sum, p) => sum + p.saving, 0);
-
-  const avgSaving =
-    totalSaving / parts.length;
-
-  const maxAbsSaving = Math.max(
-    ...parts.map(p => Math.abs(p.saving)),
-    1
-  );
-
-  container.innerHTML = `
-
-    <div>
-
-      <div class="flex items-start justify-between mb-4">
+    container.innerHTML = `
 
         <div>
-          <div class="font-bold text-slate-800 text-base">
-            All Part - Saving vs Loss
-          </div>
 
-          <div class="text-xs text-slate-500 mt-1">
-            ${parts.length} Part
-          </div>
-        </div>
+            <div class="flex items-start justify-between mb-4">
 
-        <div class="text-right">
+                <div>
 
-          <div class="font-mono font-bold text-base ${
-            totalSaving >= 0
-              ? 'text-emerald-600'
-              : 'text-red-600'
-          }">
-            ${formatIDR(totalSaving)}
-          </div>
+                    <div class="font-bold text-slate-800 text-base">
 
-          <div class="text-xs text-slate-400">
-            Avg ${formatIDR(avgSaving)}
-          </div>
+                        All Part - Saving vs Loss
 
-        </div>
+                    </div>
 
-      </div>
+                    <div class="text-xs text-slate-500 mt-1">
 
-      <div class="text-xs font-semibold text-slate-500 mb-2">
-        Semua Part (${parts.length})
-      </div>
+                        ${compareTitle}
 
-      <div class="cat-part-list space-y-2">
+                    </div>
 
-        ${parts.map((p, i) => {
+                </div>
 
-            const showWarning =
-                hasMissingStandardMaterial(
-                    p.name
-                );
+                <div class="text-right">
 
-          const pct =
-            Math.abs(p.saving) /
-            maxAbsSaving * 100;
+                    <div class="
+                        font-mono
+                        font-bold
+                        text-base
+                        ${
+                            totalSaving >= 0
+                                ? 'text-emerald-600'
+                                : 'text-red-600'
+                        }
+                    ">
 
-          const isSaving =
-            p.saving >= 0;
+                        ${formatIDR(totalSaving)}
 
-          const rankClass =
-            i === 0 ? 'rank-1' :
-            i === 1 ? 'rank-2' :
-            i === 2 ? 'rank-3' :
-            'rank-n';
+                    </div>
 
-          return `
+                    <div class="text-xs text-slate-400">
 
-          <div>
+                        Avg ${formatIDR(avgSaving)}
 
-            <div class="flex items-center justify-between mb-1">
+                    </div>
 
-              <div
-                class="flex items-center gap-1.5"
-                style="
-                  flex:1;
-                  min-width:0;
-                ">
-
-                <span class="rank-badge ${rankClass}">
-                  ${i + 1}
-                </span>
-
-                <span
-                    class="text-xs text-slate-700 font-medium cursor-pointer hover:text-blue-600 hover:underline"
-                    style="
-                        flex:1;
-                        min-width:0;
-                    "
-                    title="Klik untuk melihat detail"
-                    onclick="showPartDetail('${encodeURIComponent(p.name)}')">
-
-                    ${p.name}
-
-                </span>
-
-                ${
-                showWarning
-                    ? `
-                    <span
-                        class="badge badge-yellow"
-                        title="Terdapat kategori yang memiliki material Alternative tetapi tidak memiliki material Standard">
-
-                        ⚠ No Std
-
-                    </span>
-                    `
-                    : ''
-                }
-
-              </div>
-
-              <span
-                class="text-xs font-mono font-semibold ${
-                  isSaving
-                    ? 'text-emerald-600'
-                    : 'text-red-600'
-                }">
-
-                ${formatIDR(p.saving)}
-
-              </span>
+                </div>
 
             </div>
 
-            <div class="progress-bar">
+            <div class="text-xs font-semibold text-slate-500 mb-2">
 
-              <div
-                class="progress-bar-fill"
-                style="
-                  width:${pct}%;
-                  background:${
-                    isSaving
-                      ? '#10b981'
-                      : '#ef4444'
-                  };
-                ">
-              </div>
+                Semua Part (${parts.length})
 
             </div>
 
-          </div>
+            <div class="cat-part-list space-y-2">
 
-          `;
+                ${parts.map((p, i) => {
 
-        }).join('')}
+                    const showWarning =
+                        hasMissingStandardMaterial(
+                            p.name
+                        );
 
-      </div>
+                    const warningTitle =
+                        isAhmMode
+                            ? 'Terdapat kategori yang memiliki Alternative tetapi tidak memiliki AHM Beli'
+                            : 'Terdapat kategori yang memiliki Alternative tetapi tidak memiliki Standard';
 
-    </div>
+                    const warningLabel =
+                        isAhmMode
+                            ? 'No AHM'
+                            : 'No Std';
 
-  `;
+                    const pct =
+                        (
+                            Math.abs(p.saving)
+                            / maxAbsSaving
+                        ) * 100;
+
+                    const isSaving =
+                        p.saving >= 0;
+
+                    const rankClass =
+                        i === 0 ? 'rank-1' :
+                        i === 1 ? 'rank-2' :
+                        i === 2 ? 'rank-3' :
+                        'rank-n';
+
+                    return `
+
+                    <div>
+
+                        <div class="flex items-center justify-between mb-1">
+
+                            <div
+                                class="flex items-center gap-1.5"
+                                style="
+                                    flex:1;
+                                    min-width:0;
+                                ">
+
+                                <span class="rank-badge ${rankClass}">
+                                    ${i + 1}
+                                </span>
+
+                                <span
+                                    class="
+                                        text-xs
+                                        text-slate-700
+                                        font-medium
+                                        cursor-pointer
+                                        hover:text-blue-600
+                                        hover:underline
+                                    "
+                                    style="
+                                        flex:1;
+                                        min-width:0;
+                                    "
+                                    title="Klik untuk melihat detail"
+                                    onclick="showPartDetail('${encodeURIComponent(p.name)}')">
+
+                                    ${p.name}
+
+                                </span>
+
+                                ${
+                                    showWarning
+                                    ? `
+                                    <span
+                                        class="badge badge-yellow"
+                                        title="${warningTitle}">
+
+                                        ⚠ ${warningLabel}
+
+                                    </span>
+                                    `
+                                    : ''
+                                }
+
+                            </div>
+
+                            <span
+                                class="
+                                    text-xs
+                                    font-mono
+                                    font-semibold
+                                    ${
+                                        isSaving
+                                        ? 'text-emerald-600'
+                                        : 'text-red-600'
+                                    }
+                                ">
+
+                                ${formatIDR(p.saving)}
+
+                            </span>
+
+                        </div>
+
+                        <div class="progress-bar">
+
+                            <div
+                                class="progress-bar-fill"
+                                style="
+                                    width:${pct}%;
+                                    background:${
+                                        isSaving
+                                        ? '#10b981'
+                                        : '#ef4444'
+                                    };
+                                ">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    `;
+
+                }).join('')}
+
+            </div>
+
+        </div>
+
+    `;
 }
 
 function hasMissingStandardMaterial(partName) {
 
-  const rows =
-    APP.filteredData.filter(
-      r => r.part_name === partName
-    );
+    const rows =
+        APP.filteredData.filter(
+            r => r.part_name === partName
+        );
 
-  const kategoriMap = {};
+    const kategoriMap = {};
 
-  rows.forEach(r => {
+    const baseScenario =
+        APP.compareMode === 'ahm'
+            ? 'AHM Beli'
+            : 'Standard';
 
-    const kategori =
-      r.kategori || '-';
+    rows.forEach(r => {
 
-    if (!kategoriMap[kategori]) {
+        const kategori =
+            r.kategori || '-';
 
-      kategoriMap[kategori] = {
-        hasStandard: false,
-        hasAlternative: false
-      };
+        if (!kategoriMap[kategori]) {
 
-    }
+            kategoriMap[kategori] = {
+                hasBase: false,
+                hasAlternative: false
+            };
 
-    const material =
-      (r.material || '')
-      .toUpperCase();
+        }
 
-    const isRecycle =
-      material.includes('PELETIZING') ||
-      material.includes('REGRIND');
+        const material =
+            (r.material || '')
+            .toUpperCase();
 
-    if (isRecycle)
-      return;
+        const isRecycle =
+            material.includes('PELETIZING') ||
+            material.includes('REGRIND');
 
-    if (r.scenario === 'Standard') {
-      kategoriMap[kategori].hasStandard = true;
-    }
+        if (isRecycle)
+            return;
 
-    if (r.scenario === 'Alternative') {
-      kategoriMap[kategori].hasAlternative = true;
-    }
+        if (r.scenario === baseScenario) {
 
-  });
+            kategoriMap[kategori].hasBase = true;
 
-  return Object.values(kategoriMap)
-    .some(
-      x =>
-        !x.hasStandard &&
-        x.hasAlternative
-    );
+        }
+
+        if (r.scenario === 'Alternative') {
+
+            kategoriMap[kategori].hasAlternative = true;
+
+        }
+
+    });
+
+    return Object.values(kategoriMap)
+        .some(
+            x =>
+                !x.hasBase &&
+                x.hasAlternative
+        );
 
 }
 
@@ -699,12 +1240,31 @@ function showPartDetail(encodedPartName) {
         return;
 
     // =====================================
+    // CONFIG BY TOGGLE
+    // =====================================
+
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const baseScenario =
+        isAhmMode
+            ? 'AHM Beli'
+            : 'Standard';
+
+    const baseLabel =
+        isAhmMode
+            ? 'AHM'
+            : 'Standard';
+
+    // =====================================
     // SUMMARY
     // =====================================
 
-    const totalStd =
+    const totalBase =
         rows
-        .filter(r => r.scenario === 'Standard')
+        .filter(
+            r => r.scenario === baseScenario
+        )
         .reduce(
             (sum, r) =>
                 sum + (r.total_cost || 0),
@@ -713,7 +1273,9 @@ function showPartDetail(encodedPartName) {
 
     const totalAlt =
         rows
-        .filter(r => r.scenario === 'Alternative')
+        .filter(
+            r => r.scenario === 'Alternative'
+        )
         .reduce(
             (sum, r) =>
                 sum + (r.total_cost || 0),
@@ -721,7 +1283,7 @@ function showPartDetail(encodedPartName) {
         );
 
     const saving =
-        totalStd - totalAlt;
+        totalBase - totalAlt;
 
     // =====================================
     // MATERIAL SUMMARY BY CATEGORY
@@ -738,10 +1300,10 @@ function showPartDetail(encodedPartName) {
 
             materialSummary[kategori] = {
 
-                standardMaterial: null,
-                standardCost: 0,
+                baseMaterial: null,
 
-                alternativeMaterials: [],
+                baseCost: 0,
+
                 alternativeCost: 0
 
             };
@@ -756,41 +1318,29 @@ function showPartDetail(encodedPartName) {
             materialName.includes('PELETIZING') ||
             materialName.includes('REGRIND');
 
-        if (r.scenario === 'Standard') {
+        if (isRecycleMaterial)
+            return;
 
-            // simpan material standard pertama yg valid
+        if (r.scenario === baseScenario) {
+
             if (
-                !isRecycleMaterial &&
-                !materialSummary[kategori].standardMaterial
+                !materialSummary[kategori].baseMaterial
             ) {
 
-                materialSummary[kategori].standardMaterial =
+                materialSummary[kategori].baseMaterial =
                     r.material;
 
             }
 
-            // REGRIND & PELETIZING tidak dihitung
-            if (!isRecycleMaterial) {
-
-                materialSummary[kategori].standardCost +=
-                    r.total_cost || 0;
-
-            }
+            materialSummary[kategori].baseCost +=
+                r.total_cost || 0;
 
         }
 
         if (r.scenario === 'Alternative') {
 
-            if (!isRecycleMaterial) {
-
-                materialSummary[kategori]
-                    .alternativeMaterials
-                    .push(r.material);
-
-                materialSummary[kategori].alternativeCost +=
-                    r.total_cost || 0;
-
-            }
+            materialSummary[kategori].alternativeCost +=
+                r.total_cost || 0;
 
         }
 
@@ -806,17 +1356,17 @@ function showPartDetail(encodedPartName) {
 
             kategori,
 
-            standardMaterial:
-                v.standardMaterial,
+            baseMaterial:
+                v.baseMaterial,
 
-            standardCost:
-                v.standardCost,
+            baseCost:
+                v.baseCost,
 
             alternativeCost:
                 v.alternativeCost,
 
             saving:
-                v.standardCost -
+                v.baseCost -
                 v.alternativeCost
 
         }))
@@ -827,17 +1377,20 @@ function showPartDetail(encodedPartName) {
 
     const bestCategory =
         rankedCategories.length
-            ? rankedCategories.reduce((best, current) => {
+            ? rankedCategories.reduce(
+                (best, current) => {
 
-                if (!best)
-                    return current;
+                    if (!best)
+                        return current;
 
-                return Math.abs(current.saving) >
-                    Math.abs(best.saving)
-                    ? current
-                    : best;
+                    return Math.abs(current.saving) >
+                        Math.abs(best.saving)
+                        ? current
+                        : best;
 
-            }, null)
+                },
+                null
+            )
             : null;
 
     let html = '';
@@ -853,11 +1406,15 @@ function showPartDetail(encodedPartName) {
         <div class="kpi-card blue">
 
             <div class="text-xs text-slate-500">
-                Total Standard
+
+                Total ${baseLabel}
+
             </div>
 
             <div class="mt-2 font-bold text-2xl text-blue-700">
-                ${formatIDR(totalStd)}
+
+                ${formatIDR(totalBase)}
+
             </div>
 
         </div>
@@ -865,19 +1422,29 @@ function showPartDetail(encodedPartName) {
         <div class="kpi-card cyan">
 
             <div class="text-xs text-slate-500">
+
                 Total Alternative
+
             </div>
 
             <div class="mt-2 font-bold text-2xl text-cyan-700">
+
                 ${formatIDR(totalAlt)}
+
             </div>
 
         </div>
 
-        <div class="kpi-card ${saving >= 0 ? 'green' : 'red'}">
+        <div class="kpi-card ${
+            saving >= 0
+                ? 'green'
+                : 'red'
+        }">
 
             <div class="text-xs text-slate-500">
+
                 Total Saving
+
             </div>
 
             <div class="
@@ -886,8 +1453,8 @@ function showPartDetail(encodedPartName) {
                 text-2xl
                 ${
                     saving >= 0
-                    ? 'text-emerald-700'
-                    : 'text-red-700'
+                        ? 'text-emerald-700'
+                        : 'text-red-700'
                 }">
 
                 ${formatIDR(saving)}
@@ -901,7 +1468,7 @@ function showPartDetail(encodedPartName) {
     `;
 
     // =====================================
-    // INSIGHT + FORMULA
+    // INSIGHT
     // =====================================
 
     const insightPositive =
@@ -931,122 +1498,48 @@ function showPartDetail(encodedPartName) {
 
     html += `
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+    <div class="glass-card p-4 mb-6">
 
-        <div
-            class="
-                glass-card
-                p-4
-                h-full
-                flex
-                flex-col
-            ">
+        <div class="section-header">
 
-            <div class="section-header">
+            Insight
 
-                Insight
+        </div>
 
-            </div>
+        <div class="mt-3 text-sm">
 
-            <div
-                class="
-                    flex-1
-                    flex
-                    flex-col
-                    justify-center
-                ">
+            ${
+                bestCategory
+                ? `
+                <span class="badge ${insightBadge}">
+                    ${insightText}
+                </span>
 
-                <div class="mb-3">
+                <div class="mt-3">
 
-                    <span class="badge ${insightBadge}">
+                    Kategori
 
-                        ${insightText}
+                    <span class="font-semibold">
+
+                        ${bestCategory.kategori}
+
+                    </span>
+
+                    menghasilkan
+
+                    <span class="
+                        font-bold
+                        ${insightValueClass}
+                    ">
+
+                        ${formatIDR(bestCategory.saving)}
 
                     </span>
 
                 </div>
-
-                <div class="text-sm leading-relaxed">
-
-                    ${
-                        bestCategory
-                        ? `
-                        Kategori
-
-                        <span class="font-semibold">
-
-                            ${bestCategory.kategori}
-
-                        </span>
-
-                        menghasilkan
-
-                        <span class="
-                            font-bold
-                            ${insightValueClass}
-                        ">
-
-                            ${formatIDR(bestCategory.saving)}
-
-                        </span>
-                        `
-                        : '-'
-                    }
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div
-            class="
-                glass-card
-                p-4
-                h-full
-                flex
-                flex-col
-            ">
-
-            <div class="section-header">
-
-                Formula Perhitungan
-
-            </div>
-
-            <div
-                class="
-                    flex-1
-                    flex
-                    items-center
-                ">
-
-                <div
-                    class="
-                        text-sm
-                        text-slate-700
-                        leading-relaxed
-                    ">
-
-                    <div class="font-semibold mb-2">
-
-                        Total Cost
-
-                    </div>
-
-                    <div>
-
-                        (Qty_g / 1000)
-
-                        × Harga
-
-                        × OK_Prod
-
-                    </div>
-
-                </div>
-
-            </div>
+                `
+                : '-'
+            }
 
         </div>
 
@@ -1077,8 +1570,8 @@ function showPartDetail(encodedPartName) {
                     <tr>
 
                         <th>Kategori</th>
-                        <th>Material Standard</th>
-                        <th>Standard Cost</th>
+                        <th>Material ${baseLabel}</th>
+                        <th>${baseLabel} Cost</th>
                         <th>Alternative Cost</th>
                         <th>Saving</th>
 
@@ -1108,13 +1601,13 @@ function showPartDetail(encodedPartName) {
 
             <td>
 
-                ${v.standardMaterial || '-'}
+                ${v.baseMaterial || '-'}
 
             </td>
 
             <td class="text-right">
 
-                ${formatIDR(v.standardCost)}
+                ${formatIDR(v.baseCost)}
 
             </td>
 
@@ -1197,8 +1690,14 @@ function showPartDetail(encodedPartName) {
                 <tbody>
 
     `;
+    const detailRows =
+    rows.filter(
+        r =>
+            r.scenario === baseScenario ||
+            r.scenario === 'Alternative'
+    );
 
-    rows.forEach(r => {
+    detailRows.forEach(r => {
 
         html += `
 
@@ -1209,12 +1708,14 @@ function showPartDetail(encodedPartName) {
                 <span class="
                     badge
                     ${
-                        r.scenario === 'Standard'
-                        ? 'badge-blue'
-                        : 'badge-yellow'
+                        r.scenario === 'Alternative'
+                        ? 'badge-yellow'
+                        : 'badge-blue'
                     }
                 ">
+
                     ${r.scenario}
+
                 </span>
 
             </td>
@@ -1274,7 +1775,7 @@ function showPartDetail(encodedPartName) {
     document.getElementById(
         'part-detail-subtitle'
     ).textContent =
-        `${rows.length} Record`;
+        `${baseLabel} vs Alternative • ${detailRows.length} Record`;
 
     document.getElementById(
         'part-detail-body'
@@ -1284,6 +1785,2481 @@ function showPartDetail(encodedPartName) {
         'part-detail-modal'
     ).classList.remove('hidden');
 
+}
+
+function getCompareScenario() {
+
+    return APP.compareMode === 'ahm'
+        ? {
+            baseScenario: 'AHM Beli',
+            baseLabel: 'AHM',
+            compareScenario: 'Alternative'
+        }
+        : {
+            baseScenario: 'Standard',
+            baseLabel: 'Standard',
+            compareScenario: 'Alternative'
+        };
+
+}
+
+// ===== RENDER TOP MATERIAL CHART =====
+function renderTopMaterialChart() {
+
+    const materialSaving = {};
+
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const baseScenario =
+        isAhmMode
+            ? 'AHM Beli'
+            : 'Standard';
+
+    const compareTitle =
+        isAhmMode
+            ? 'AHM vs Alternative'
+            : 'Standard vs Alternative';
+
+    // =====================================
+    // GROUP PART + KATEGORI
+    // =====================================
+
+    const partKategoriMap = {};
+
+    APP.filteredData.forEach(r => {
+
+        const part =
+            r.part_name || '-';
+
+        const kategori =
+            r.kategori || '-';
+
+        if (!partKategoriMap[part]) {
+
+            partKategoriMap[part] = {};
+
+        }
+
+        if (!partKategoriMap[part][kategori]) {
+
+            partKategoriMap[part][kategori] = {
+
+                base: [],
+                alternative: []
+
+            };
+
+        }
+
+        if (r.scenario === baseScenario) {
+
+            partKategoriMap[part][kategori]
+                .base.push(r);
+
+        }
+
+        if (r.scenario === 'Alternative') {
+
+            partKategoriMap[part][kategori]
+                .alternative.push(r);
+
+        }
+
+    });
+
+    // =====================================
+    // HITUNG PER PART + KATEGORI
+    // =====================================
+
+    Object.entries(partKategoriMap)
+        .forEach(([partName, kategoriMap]) => {
+
+        Object.entries(kategoriMap)
+            .forEach(([kategori, data]) => {
+
+            if (!data.base.length) {
+
+                return;
+
+            }
+
+            // ============================
+            // MATERIAL UTAMA
+            // ============================
+
+            const mainMaterialRow =
+                data.base.find(x => {
+
+                    const name =
+                        (x.material || '')
+                        .toUpperCase();
+
+                    return (
+                        !name.includes('REGRIND') &&
+                        !name.includes('PELETIZING')
+                    );
+
+                });
+
+            if (!mainMaterialRow) {
+
+                return;
+
+            }
+
+            const mainMaterial =
+                mainMaterialRow.material;
+
+            // ============================
+            // COST BASE
+            // ============================
+
+            let baseCost = 0;
+
+            data.base.forEach(r => {
+
+                const qty =
+                    Number(r.qty_g || 0);
+
+                const harga =
+                    Number(r.harga || 0);
+
+                const qtyProd =
+                    Number(r.qty_prod || 0);
+
+                baseCost +=
+                    qty *
+                    harga *
+                    qtyProd /
+                    1000;
+
+            });
+
+            // ============================
+            // COST ALTERNATIVE
+            // ============================
+
+            let alternativeCost = 0;
+
+            data.alternative.forEach(r => {
+
+                const qty =
+                    Number(r.qty_g || 0);
+
+                const harga =
+                    Number(r.harga || 0);
+
+                const qtyProd =
+                    Number(r.qty_prod || 0);
+
+                alternativeCost +=
+                    qty *
+                    harga *
+                    qtyProd /
+                    1000;
+
+            });
+
+            // ============================
+            // SAVING
+            // ============================
+
+            const saving =
+                baseCost -
+                alternativeCost;
+
+            const key =
+                `${kategori}|${mainMaterial}`;
+
+            if (!materialSaving[key]) {
+
+                materialSaving[key] = {
+
+                    kategori,
+
+                    material:
+                        mainMaterial,
+
+                    saving: 0,
+
+                    partCount: 0
+
+                };
+
+            }
+
+            materialSaving[key].saving +=
+                saving;
+
+            materialSaving[key].partCount++;
+
+        });
+
+    });
+
+    // =====================================
+    // SORT
+    // =====================================
+
+    const materials =
+        Object.values(materialSaving)
+        .sort(
+            (a, b) =>
+                b.saving - a.saving
+        );
+
+    const container =
+        document.getElementById(
+            'chart-top-material'
+        );
+
+    if (!materials.length) {
+
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="text-sm">
+                    Data belum tersedia
+                </div>
+            </div>
+        `;
+
+        return;
+
+    }
+
+    const totalSaving =
+        materials.reduce(
+            (sum, m) =>
+                sum + m.saving,
+            0
+        );
+
+    const avgSaving =
+        totalSaving /
+        materials.length;
+
+    const maxAbsSaving =
+        Math.max(
+            ...materials.map(
+                m => Math.abs(m.saving)
+            ),
+            1
+        );
+
+    // =====================================
+    // RENDER
+    // =====================================
+
+    container.innerHTML = `
+
+        <div>
+
+            <div
+                class="
+                    flex
+                    items-start
+                    justify-between
+                    mb-4
+                ">
+
+                <div>
+
+                    <div
+                        class="
+                            font-bold
+                            text-slate-800
+                            text-base
+                        ">
+
+                        All Material - Saving vs Loss
+
+                    </div>
+
+                    <div
+                        class="
+                            text-xs
+                            text-slate-500
+                            mt-1
+                        ">
+
+                        ${compareTitle}
+
+                    </div>
+
+                </div>
+
+                <div class="text-right">
+
+                    <div
+                        class="
+                            font-mono
+                            font-bold
+                            text-base
+                            ${
+                                totalSaving >= 0
+                                    ? 'text-emerald-600'
+                                    : 'text-red-600'
+                            }
+                        ">
+
+                        ${formatIDR(totalSaving)}
+
+                    </div>
+
+                    <div
+                        class="
+                            text-xs
+                            text-slate-400
+                        ">
+
+                        Avg ${formatIDR(avgSaving)}
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div
+                class="
+                    text-xs
+                    font-semibold
+                    text-slate-500
+                    mb-2
+                ">
+
+                Semua Material
+                (${materials.length})
+
+            </div>
+
+            <div
+                class="
+                    cat-part-list
+                    space-y-2
+                ">
+
+                ${materials.map((m, i) => {
+
+                    const pct =
+                        Math.abs(m.saving) /
+                        maxAbsSaving *
+                        100;
+
+                    const isSaving =
+                        m.saving >= 0;
+
+                    const rankClass =
+                        i === 0
+                            ? 'rank-1'
+                            : i === 1
+                            ? 'rank-2'
+                            : i === 2
+                            ? 'rank-3'
+                            : 'rank-n';
+
+                    return `
+
+                    <div>
+
+                        <div
+                            class="
+                                flex
+                                items-center
+                                justify-between
+                                mb-1
+                            ">
+
+                            <div
+                                class="
+                                    flex
+                                    items-center
+                                    gap-1.5
+                                "
+                                style="
+                                    flex:1;
+                                    min-width:0;
+                                ">
+
+                                <span
+                                    class="
+                                        rank-badge
+                                        ${rankClass}
+                                    ">
+
+                                    ${i + 1}
+
+                                </span>
+
+                                <span
+                                    class="
+                                        text-xs
+                                        text-slate-700
+                                        font-medium
+                                        cursor-pointer
+                                        hover:text-blue-600
+                                        hover:underline
+                                    "
+                                    onclick="showMaterialDetail(
+                                        '${encodeURIComponent(m.material)}',
+                                        '${encodeURIComponent(m.kategori)}'
+                                    )"
+                                    style="
+                                        flex:1;
+                                        min-width:0;
+                                        overflow:hidden;
+                                        white-space:nowrap;
+                                        text-overflow:ellipsis;
+                                    "
+                                    title="${m.material}">
+
+                                    [${m.kategori}]
+                                    ${m.material}
+
+                                </span>
+
+                            </div>
+
+                            <span
+                                class="
+                                    text-xs
+                                    font-mono
+                                    font-semibold
+                                    ${
+                                        isSaving
+                                            ? 'text-emerald-600'
+                                            : 'text-red-600'
+                                    }
+                                ">
+
+                                ${formatIDR(m.saving)}
+
+                            </span>
+
+                        </div>
+
+                        <div class="progress-bar">
+
+                            <div
+                                class="progress-bar-fill"
+                                style="
+                                    width:${pct}%;
+                                    background:${
+                                        isSaving
+                                            ? '#10b981'
+                                            : '#ef4444'
+                                    };
+                                ">
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    `;
+
+                }).join('')}
+
+            </div>
+
+        </div>
+
+    `;
+
+}
+
+function showMaterialDetail(
+    encodedMaterial,
+    encodedKategori
+) {
+
+    const material =
+        decodeURIComponent(
+            encodedMaterial
+        );
+
+    const kategori =
+        decodeURIComponent(
+            encodedKategori
+        );
+
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const baseScenario =
+        isAhmMode
+            ? 'AHM Beli'
+            : 'Standard';
+
+    const baseLabel =
+        isAhmMode
+            ? 'AHM'
+            : 'Standard';
+
+    // =====================================
+    // GROUP PART + KATEGORI
+    // =====================================
+
+    const partKategoriMap = {};
+
+    APP.filteredData.forEach(r => {
+
+        const part =
+            r.part_name || '-';
+
+        if (r.kategori !== kategori) {
+            return;
+        }
+
+        if (!partKategoriMap[part]) {
+
+            partKategoriMap[part] = {
+
+                base: [],
+                alternative: []
+
+            };
+
+        }
+
+        if (
+            r.scenario === baseScenario
+        ) {
+
+            partKategoriMap[part]
+                .base.push(r);
+
+        }
+
+        if (
+            r.scenario === 'Alternative'
+        ) {
+
+            partKategoriMap[part]
+                .alternative.push(r);
+
+        }
+
+    });
+
+    // =====================================
+    // ANALISA PART
+    // =====================================
+
+    const detailRows = [];
+
+    Object.entries(
+        partKategoriMap
+    ).forEach(([partName, obj]) => {
+
+        if (!obj.base.length) {
+            return;
+        }
+
+        const mainMaterialRow =
+            obj.base.find(x => {
+
+                const name =
+                    (x.material || '')
+                    .toUpperCase();
+
+                return (
+                    !name.includes('REGRIND') &&
+                    !name.includes('PELETIZING')
+                );
+
+            });
+
+        if (!mainMaterialRow) {
+            return;
+        }
+
+        if (
+            mainMaterialRow.material !==
+            material
+        ) {
+            return;
+        }
+
+        // ==========================
+        // COST BASE
+        // ==========================
+
+        let baseCost = 0;
+
+        obj.base.forEach(r => {
+
+            baseCost += (
+                Number(r.qty_g || 0)
+                *
+                Number(r.harga || 0)
+                *
+                Number(r.qty_prod || 0)
+            ) / 1000;
+
+        });
+
+        // ==========================
+        // COST ALTERNATIVE
+        // ==========================
+
+        let alternativeCost = 0;
+
+        obj.alternative.forEach(r => {
+
+            alternativeCost += (
+                Number(r.qty_g || 0)
+                *
+                Number(r.harga || 0)
+                *
+                Number(r.qty_prod || 0)
+            ) / 1000;
+
+        });
+
+        const saving =
+            baseCost -
+            alternativeCost;
+
+        detailRows.push({
+
+            partName,
+
+            baseCost,
+
+            alternativeCost,
+
+            saving,
+
+            baseMaterials:
+                obj.base.map(
+                    x => x.material
+                ),
+
+            alternativeMaterials:
+                obj.alternative.map(
+                    x => x.material
+                )
+
+        });
+
+    });
+
+    detailRows.sort(
+        (a, b) =>
+            b.saving - a.saving
+    );
+
+    const totalSaving =
+        detailRows.reduce(
+            (sum, x) =>
+                sum + x.saving,
+            0
+        );
+
+    const bestPart =
+        detailRows[0];
+
+    const worstPart =
+        [...detailRows]
+        .sort(
+            (a, b) =>
+                a.saving - b.saving
+        )[0];
+
+    // =====================================
+    // ALTERNATIVE MATERIAL SUMMARY
+    // =====================================
+
+    const alternativeMap = {};
+
+    detailRows.forEach(r => {
+
+        r.alternativeMaterials
+            .forEach(mat => {
+
+                if (
+                    !alternativeMap[mat]
+                ) {
+
+                    alternativeMap[mat] = {
+
+                        material: mat,
+
+                        saving: 0,
+
+                        count: 0
+
+                    };
+
+                }
+
+                alternativeMap[mat]
+                    .saving +=
+                    r.saving;
+
+                alternativeMap[mat]
+                    .count++;
+
+            });
+
+    });
+
+    const alternatives =
+        Object.values(
+            alternativeMap
+        ).sort(
+            (a, b) =>
+                b.saving - a.saving
+        );
+
+    // =====================================
+    // HTML
+    // =====================================
+
+    let html = '';
+
+    html += `
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+
+        <div class="kpi-card">
+
+            <div class="text-xs text-slate-500">
+                Kategori
+            </div>
+
+            <div class="mt-2">
+
+                <span class="badge badge-blue">
+                    ${kategori}
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="kpi-card">
+
+            <div class="text-xs text-slate-500">
+                Material ${baseLabel}
+            </div>
+
+            <div class="mt-2 text-sm font-semibold">
+                ${material}
+            </div>
+
+        </div>
+
+        <div class="kpi-card">
+
+            <div class="text-xs text-slate-500">
+                Jumlah Part
+            </div>
+
+            <div class="mt-2 text-2xl font-bold">
+                ${detailRows.length}
+            </div>
+
+        </div>
+
+        <div class="kpi-card ${totalSaving >= 0 ? 'green' : 'red'}">
+
+            <div class="text-xs text-slate-500">
+                Total Saving
+            </div>
+
+            <div class="mt-2 text-2xl font-bold ${totalSaving >= 0 ? 'text-emerald-700' : 'text-red-700'}">
+                ${formatIDR(totalSaving)}
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+
+        <div class="glass-card p-4">
+
+            <div class="section-header">
+                Saving Terbesar
+            </div>
+
+            <div class="mt-2">
+
+                <div class="font-semibold">
+                    ${bestPart?.partName || '-'}
+                </div>
+
+                <div class="text-emerald-600 font-bold mt-1">
+                    ${bestPart ? formatIDR(bestPart.saving) : '-'}
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="glass-card p-4">
+
+            <div class="section-header">
+                Kerugian Terbesar
+            </div>
+
+            <div class="mt-2">
+
+                <div class="font-semibold">
+                    ${worstPart?.partName || '-'}
+                </div>
+
+                <div class="text-red-600 font-bold mt-1">
+                    ${worstPart ? formatIDR(worstPart.saving) : '-'}
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="glass-card p-4 mb-6">
+
+        <div class="section-header">
+            Part Impact Analysis
+        </div>
+
+        <table class="data-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Part</th>
+                    <th>${baseLabel}</th>
+                    <th>Alternative</th>
+                    <th>Saving</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                ${detailRows.map(r => `
+
+                <tr>
+
+                    <td>
+
+                        <span
+                            class="cursor-pointer hover:text-blue-600 hover:underline"
+                            onclick="showPartDetail('${encodeURIComponent(r.partName)}')">
+
+                            ${r.partName}
+
+                        </span>
+
+                    </td>
+
+                    <td>
+
+                        ${r.baseMaterials.join('<br>')}
+
+                    </td>
+
+                    <td>
+
+                        ${r.alternativeMaterials.join('<br>')}
+
+                    </td>
+
+                    <td class="text-right">
+
+                        <span class="badge ${r.saving >= 0 ? 'badge-green' : 'badge-red'}">
+
+                            ${formatIDR(r.saving)}
+
+                        </span>
+
+                    </td>
+
+                </tr>
+
+                `).join('')}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    <div class="glass-card p-4">
+
+        <div class="section-header">
+
+            Alternative Material Summary
+
+        </div>
+
+        <table class="data-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Alternative Material</th>
+                    <th>Part</th>
+                    <th>Total Impact</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                ${alternatives.map(a => `
+
+                <tr>
+
+                    <td>${a.material}</td>
+
+                    <td>${a.count}</td>
+
+                    <td class="text-right">
+                        ${formatIDR(a.saving)}
+                    </td>
+
+                </tr>
+
+                `).join('')}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+    `;
+
+    document.getElementById(
+        'part-detail-title'
+    ).textContent =
+        material;
+
+    document.getElementById(
+        'part-detail-subtitle'
+    ).textContent =
+        `${baseLabel} vs Alternative • Kategori ${kategori}`;
+
+    document.getElementById(
+        'part-detail-body'
+    ).innerHTML =
+        html;
+
+    document.getElementById(
+        'part-detail-modal'
+    ).classList.remove(
+        'hidden'
+    );
+
+}
+
+// ===== RENDER CATEGORY CARDS =====
+function renderCategoryCards() {
+
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const baseScenario =
+        isAhmMode
+            ? 'AHM Beli'
+            : 'Standard';
+
+    // =====================================
+    // GROUP BY KATEGORI
+    // =====================================
+
+    const byKat = {};
+
+    APP.filteredData.forEach(r => {
+
+        if (!byKat[r.kategori]) {
+
+            byKat[r.kategori] = {
+
+                parts: new Set(),
+
+                base: 0,
+
+                alt: 0,
+
+                rows: []
+
+            };
+
+        }
+
+        byKat[r.kategori]
+            .parts.add(r.part_name);
+
+        if (
+            r.scenario === baseScenario
+        ) {
+
+            byKat[r.kategori]
+                .base += r.total_cost;
+
+        }
+
+        if (
+            r.scenario === 'Alternative'
+        ) {
+
+            byKat[r.kategori]
+                .alt += r.total_cost;
+
+        }
+
+        byKat[r.kategori]
+            .rows.push(r);
+
+    });
+
+    const container =
+        document.getElementById(
+            'category-cards'
+        );
+
+    if (
+        Object.keys(byKat).length === 0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="col-span-3 empty-state">
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+
+                </svg>
+
+                <div class="text-base font-semibold">
+
+                    Data belum tersedia
+
+                </div>
+
+                <div class="text-sm mt-1">
+
+                    Upload file Excel terlebih dahulu
+
+                </div>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+    // =====================================
+    // SORT KATEGORI
+    // =====================================
+
+    const priorityOrder = {
+
+        ABS: 1,
+
+        PP: 2,
+
+        PPGF: 3
+
+    };
+
+    const sortedKat =
+        Object.entries(byKat)
+        .sort((a, b) => {
+
+            const orderA =
+                priorityOrder[a[0]] || 999;
+
+            const orderB =
+                priorityOrder[b[0]] || 999;
+
+            if (orderA !== orderB) {
+
+                return orderA - orderB;
+
+            }
+
+            const savA =
+                a[1].base - a[1].alt;
+
+            const savB =
+                b[1].base - b[1].alt;
+
+            return savB - savA;
+
+        });
+
+    container.innerHTML =
+        sortedKat.map(
+            ([kat, val], idx) => {
+
+        const saving =
+            val.base - val.alt;
+
+        const partCount =
+            val.parts.size;
+
+        const avgSaving =
+            partCount > 0
+                ? saving / partCount
+                : 0;
+
+        const isSav =
+            saving >= 0;
+
+        const color =
+            CATEGORY_COLORS[
+                idx % CATEGORY_COLORS.length
+            ];
+
+        // =================================
+        // PART SAVING
+        // =================================
+
+        const partSaving = {};
+
+        val.rows.forEach(r => {
+
+            if (
+                !partSaving[r.part_name]
+            ) {
+
+                partSaving[r.part_name] = {
+
+                    base: 0,
+
+                    alt: 0
+
+                };
+
+            }
+
+            if (
+                r.scenario === baseScenario
+            ) {
+
+                partSaving[r.part_name]
+                    .base += r.total_cost;
+
+            }
+
+            if (
+                r.scenario === 'Alternative'
+            ) {
+
+                partSaving[r.part_name]
+                    .alt += r.total_cost;
+
+            }
+
+        });
+
+        const allParts =
+            Object.entries(partSaving)
+            .map(([name, v]) => ({
+
+                name,
+
+                saving:
+                    v.base - v.alt
+
+            }))
+            .sort(
+                (a, b) =>
+                    b.saving - a.saving
+            );
+
+        const maxAbsSaving =
+            Math.max(
+                ...allParts.map(
+                    p =>
+                        Math.abs(
+                            p.saving
+                        )
+                ),
+                1
+            );
+
+        return `
+
+            <div
+                class="
+                    category-card
+                    fade-in
+                    fade-in-delay-${(idx % 4) + 1}
+                ">
+
+                <div
+                    class="h-1.5"
+                    style="
+                        background:
+                        linear-gradient(
+                            90deg,
+                            ${color},
+                            ${color}88
+                        );
+                    ">
+                </div>
+
+                <div class="p-4">
+
+                    <div
+                        class="
+                            flex
+                            items-start
+                            justify-between
+                            mb-3
+                        ">
+
+                        <div>
+
+                            <div
+                                class="
+                                    font-bold
+                                    text-slate-800
+                                    text-base
+                                ">
+
+                                ${kat || 'Unknown'}
+
+                            </div>
+
+                            <div
+                                class="
+                                    text-xs
+                                    text-slate-500
+                                    mt-0.5
+                                ">
+
+                                ${partCount} Part
+
+                            </div>
+
+                        </div>
+
+                        <div
+                            class="text-right">
+
+                            <div
+                                class="
+                                    font-mono
+                                    font-bold
+                                    text-base
+                                    ${
+                                        isSav
+                                            ? 'text-emerald-600'
+                                            : 'text-red-600'
+                                    }
+                                ">
+
+                                ${formatIDR(saving)}
+
+                            </div>
+
+                            <div
+                                class="
+                                    text-xs
+                                    text-slate-400
+                                ">
+
+                                Avg ${formatIDR(avgSaving)}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-2">
+
+                        <div
+                            class="
+                                text-xs
+                                font-semibold
+                                text-slate-500
+                                mb-2
+                            ">
+
+                            Semua Part
+                            (${allParts.length})
+
+                        </div>
+
+                        <div
+                            class="
+                                cat-part-list
+                                space-y-2
+                            ">
+
+                            ${allParts.map((p, i) => {
+
+                                const pct =
+                                    Math.abs(
+                                        p.saving
+                                    ) /
+                                    maxAbsSaving *
+                                    100;
+
+                                const pSav =
+                                    p.saving >= 0;
+
+                                const rankClass =
+                                    i === 0
+                                        ? 'rank-1'
+                                        : i === 1
+                                        ? 'rank-2'
+                                        : i === 2
+                                        ? 'rank-3'
+                                        : 'rank-n';
+
+                                return `
+
+                                <div>
+
+                                    <div
+                                        class="
+                                            flex
+                                            items-center
+                                            justify-between
+                                            mb-1
+                                        ">
+
+                                        <div
+                                            class="
+                                                flex
+                                                items-center
+                                                gap-1.5
+                                            "
+                                            style="
+                                                flex:1;
+                                                min-width:0;
+                                                overflow:hidden;
+                                            ">
+
+                                            <span
+                                                class="
+                                                    rank-badge
+                                                    ${rankClass}
+                                                ">
+
+                                                ${i + 1}
+
+                                            </span>
+
+                                            <span
+                                                class="
+                                                    text-xs
+                                                    text-slate-700
+                                                    font-medium
+                                                    cursor-pointer
+                                                    hover:text-blue-600
+                                                    hover:underline
+                                                "
+                                                style="
+                                                    flex:1;
+                                                    min-width:0;
+                                                    overflow:hidden;
+                                                    white-space:nowrap;
+                                                    text-overflow:ellipsis;
+                                                    display:block;
+                                                "
+                                                title="${p.name}"
+                                                onclick="showPartDetailKategori(
+                                                    '${encodeURIComponent(p.name)}',
+                                                    '${encodeURIComponent(kat)}'
+                                                )">
+
+                                                ${p.name}
+
+                                            </span>
+
+                                        </div>
+
+                                        <span
+                                            class="
+                                                text-xs
+                                                font-mono
+                                                font-semibold
+                                                ${
+                                                    pSav
+                                                    ? 'text-emerald-600'
+                                                    : 'text-red-600'
+                                                }
+                                            "
+                                            style="
+                                                margin-left:8px;
+                                                white-space:nowrap;
+                                            ">
+
+                                            ${formatIDR(p.saving)}
+
+                                        </span>
+
+                                    </div>
+
+                                    <div class="progress-bar">
+
+                                        <div
+                                            class="
+                                                progress-bar-fill
+                                            "
+                                            style="
+                                                width:${pct}%;
+                                                background:${
+                                                    pSav
+                                                    ? '#10b981'
+                                                    : '#ef4444'
+                                                };
+                                            ">
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                `;
+
+                            }).join('')}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }).join('');
+
+}
+
+function showPartDetailKategori(
+    encodedPartName,
+    encodedKategori
+) {
+
+    const partName =
+        decodeURIComponent(
+            encodedPartName
+        );
+
+    const kategori =
+        decodeURIComponent(
+            encodedKategori
+        );
+
+    const rows =
+        APP.filteredData.filter(
+            x =>
+                x.part_name === partName &&
+                (x.kategori || '-') === kategori
+        );
+
+    if (!rows.length)
+        return;
+
+    // =====================================
+    // SUMMARY
+    // =====================================
+
+    const totalStd =
+        rows
+        .filter(
+            r => r.scenario === 'Standard'
+        )
+        .reduce(
+            (sum, r) =>
+                sum + (r.total_cost || 0),
+            0
+        );
+
+    const totalAlt =
+        rows
+        .filter(
+            r => r.scenario === 'Alternative'
+        )
+        .reduce(
+            (sum, r) =>
+                sum + (r.total_cost || 0),
+            0
+        );
+
+    const saving =
+        totalStd - totalAlt;
+
+    // Standard dulu
+    rows.sort((a, b) => {
+
+        if (
+            a.scenario === b.scenario
+        )
+            return 0;
+
+        return a.scenario === 'Standard'
+            ? -1
+            : 1;
+
+    });
+
+    let html = '';
+
+    // =====================================
+    // KPI
+    // =====================================
+
+    html += `
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+
+        <div class="kpi-card">
+
+            <div class="text-xs text-slate-500">
+                Kategori Material
+            </div>
+
+            <div class="mt-2">
+
+                <span class="
+                    badge
+                    badge-blue
+                    text-sm
+                ">
+
+                    ${kategori}
+
+                </span>
+
+            </div>
+
+        </div>
+
+        <div class="kpi-card blue">
+
+            <div class="text-xs text-slate-500">
+                Total Standard
+            </div>
+
+            <div class="mt-2 font-bold text-2xl text-blue-700">
+
+                ${formatIDR(totalStd)}
+
+            </div>
+
+        </div>
+
+        <div class="kpi-card cyan">
+
+            <div class="text-xs text-slate-500">
+                Total Alternative
+            </div>
+
+            <div class="mt-2 font-bold text-2xl text-cyan-700">
+
+                ${formatIDR(totalAlt)}
+
+            </div>
+
+        </div>
+
+        <div class="kpi-card ${
+            saving >= 0
+                ? 'green'
+                : 'red'
+        }">
+
+            <div class="text-xs text-slate-500">
+                Total Saving
+            </div>
+
+            <div
+                class="
+                    mt-2
+                    font-bold
+                    text-2xl
+                    ${
+                        saving >= 0
+                            ? 'text-emerald-700'
+                            : 'text-red-700'
+                    }
+                ">
+
+                ${formatIDR(saving)}
+
+            </div>
+
+        </div>
+
+    </div>
+
+    `;
+
+    // =====================================
+    // FORMULA
+    // =====================================
+
+    html += `
+
+    <div class="glass-card p-3 mb-6">
+
+        <div class="section-header">
+
+            Formula Perhitungan
+
+        </div>
+
+        <div
+            class="
+                text-sm
+                text-slate-700
+            ">
+
+            Total Cost =
+            (Qty_g / 1000)
+            × Harga
+            × OK_Prod
+
+        </div>
+
+    </div>
+
+    `;
+
+    // =====================================
+    // DETAIL SOURCE DATA
+    // =====================================
+
+    html += `
+
+    <div class="glass-card p-4">
+
+        <div class="section-header">
+
+            Detail Source Data
+
+        </div>
+
+        <div class="overflow-auto">
+
+            <table class="data-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>No</th>
+                        <th>Scenario</th>
+                        <th>Material</th>
+                        <th>Component</th>
+                        <th>Qty</th>
+                        <th>Harga</th>
+                        <th>OK Prod</th>
+                        <th>Total Cost</th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+    `;
+
+    rows.forEach((r, idx) => {
+
+        html += `
+
+        <tr>
+
+            <td class="text-center">
+
+                ${idx + 1}
+
+            </td>
+
+            <td>
+
+                <span class="
+                    badge
+                    ${
+                        r.scenario === 'Standard'
+                            ? 'badge-blue'
+                            : 'badge-yellow'
+                    }
+                ">
+
+                    ${r.scenario}
+
+                </span>
+
+            </td>
+
+            <td>
+
+                ${r.material}
+
+            </td>
+
+            <td>
+
+                ${r.component}
+
+            </td>
+
+            <td class="text-right">
+
+                ${formatNumber(
+                    r.qty_g
+                )}
+
+            </td>
+
+            <td class="text-right">
+
+                ${formatIDR(
+                    r.harga
+                )}
+
+            </td>
+
+            <td class="text-right">
+
+                ${formatNumber(
+                    r.ok_prod
+                )}
+
+            </td>
+
+            <td
+                class="
+                    text-right
+                    font-semibold
+                ">
+
+                ${formatIDR(
+                    r.total_cost
+                )}
+
+            </td>
+
+        </tr>
+
+        `;
+
+    });
+
+    html += `
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+    `;
+
+    document.getElementById(
+        'part-detail-title'
+    ).textContent =
+        partName;
+
+    document.getElementById(
+        'part-detail-subtitle'
+    ).textContent =
+        `Kategori ${kategori} • ${rows.length} Record`;
+
+    document.getElementById(
+        'part-detail-body'
+    ).innerHTML =
+        html;
+
+    document.getElementById(
+        'part-detail-modal'
+    ).classList.remove(
+        'hidden'
+    );
+
+}
+
+// ===== RENDER HOPPER CARDS =====
+function renderHopperCards() {
+
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const baseScenario =
+        isAhmMode
+            ? 'AHM Beli'
+            : 'Standard';
+
+    // =====================================
+    // GROUP BY HOPPER
+    // =====================================
+
+    const byHopper = {};
+
+    APP.filteredData.forEach(r => {
+
+        const hopper =
+            r.hopper || 'Unknown';
+
+        if (!byHopper[hopper]) {
+
+            byHopper[hopper] = {
+
+                parts: new Set(),
+
+                base: 0,
+
+                alt: 0,
+
+                rows: []
+
+            };
+
+        }
+
+        byHopper[hopper]
+            .parts.add(r.part_name);
+
+        if (
+            r.scenario === baseScenario
+        ) {
+
+            byHopper[hopper]
+                .base += r.total_cost;
+
+        }
+
+        if (
+            r.scenario === 'Alternative'
+        ) {
+
+            byHopper[hopper]
+                .alt += r.total_cost;
+
+        }
+
+        byHopper[hopper]
+            .rows.push(r);
+
+    });
+
+    const container =
+        document.getElementById(
+            'hopper-cards'
+        );
+
+    if (
+        Object.keys(byHopper).length === 0
+    ) {
+
+        container.innerHTML = `
+            <div class="col-span-3 empty-state">
+
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.5"
+                        d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+
+                </svg>
+
+                <div class="text-base font-semibold">
+
+                    Data belum tersedia
+
+                </div>
+
+                <div class="text-sm mt-1">
+
+                    Upload file Excel terlebih dahulu
+
+                </div>
+
+            </div>
+        `;
+
+        return;
+
+    }
+
+    // =====================================
+    // SORT HOPPER
+    // =====================================
+
+    const sortedHopper =
+        Object.entries(byHopper)
+        .sort(
+            (a, b) =>
+                (b[1].base - b[1].alt)
+                -
+                (a[1].base - a[1].alt)
+        );
+
+    container.innerHTML =
+        sortedHopper.map(
+            ([hopper, val], idx) => {
+
+        const saving =
+            val.base - val.alt;
+
+        const partCount =
+            val.parts.size;
+
+        const avgSaving =
+            partCount > 0
+                ? saving / partCount
+                : 0;
+
+        const isSav =
+            saving >= 0;
+
+        const color =
+            CATEGORY_COLORS[
+                idx % CATEGORY_COLORS.length
+            ];
+
+        // =================================
+        // PART SAVING
+        // =================================
+
+        const partSaving = {};
+
+        val.rows.forEach(r => {
+
+            if (
+                !partSaving[r.part_name]
+            ) {
+
+                partSaving[r.part_name] = {
+
+                    base: 0,
+
+                    alt: 0
+
+                };
+
+            }
+
+            if (
+                r.scenario === baseScenario
+            ) {
+
+                partSaving[r.part_name]
+                    .base += r.total_cost;
+
+            }
+
+            if (
+                r.scenario === 'Alternative'
+            ) {
+
+                partSaving[r.part_name]
+                    .alt += r.total_cost;
+
+            }
+
+        });
+
+        const allParts =
+            Object.entries(partSaving)
+            .map(([name, v]) => ({
+
+                name,
+
+                saving:
+                    v.base - v.alt
+
+            }))
+            .sort(
+                (a, b) =>
+                    b.saving - a.saving
+            );
+
+        const maxAbsSaving =
+            Math.max(
+                ...allParts.map(
+                    p =>
+                        Math.abs(
+                            p.saving
+                        )
+                ),
+                1
+            );
+
+        return `
+
+            <div
+                class="
+                    category-card
+                    fade-in
+                    fade-in-delay-${(idx % 4) + 1}
+                ">
+
+                <div
+                    class="h-1.5"
+                    style="
+                        background:
+                        linear-gradient(
+                            90deg,
+                            ${color},
+                            ${color}88
+                        );
+                    ">
+                </div>
+
+                <div class="p-4">
+
+                    <div
+                        class="
+                            flex
+                            items-start
+                            justify-between
+                            mb-3
+                        ">
+
+                        <div>
+
+                            <div
+                                class="
+                                    font-bold
+                                    text-slate-800
+                                    text-base
+                                ">
+
+                                ${hopper}
+
+                            </div>
+
+                            <div
+                                class="
+                                    text-xs
+                                    text-slate-500
+                                    mt-0.5
+                                ">
+
+                                ${partCount} Part
+
+                            </div>
+
+                        </div>
+
+                        <div class="text-right">
+
+                            <div
+                                class="
+                                    font-mono
+                                    font-bold
+                                    text-base
+                                    ${
+                                        isSav
+                                            ? 'text-emerald-600'
+                                            : 'text-red-600'
+                                    }
+                                ">
+
+                                ${formatIDR(saving)}
+
+                            </div>
+
+                            <div
+                                class="
+                                    text-xs
+                                    text-slate-400
+                                ">
+
+                                Avg ${formatIDR(avgSaving)}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-2">
+
+                        <div
+                            class="
+                                text-xs
+                                font-semibold
+                                text-slate-500
+                                mb-2
+                            ">
+
+                            Semua Part
+                            (${allParts.length})
+
+                        </div>
+
+                        <div
+                            class="
+                                cat-part-list
+                                space-y-2
+                            ">
+
+                            ${allParts.map((p, i) => {
+
+                                const pct =
+                                    Math.abs(
+                                        p.saving
+                                    ) /
+                                    maxAbsSaving *
+                                    100;
+
+                                const pSav =
+                                    p.saving >= 0;
+
+                                const rankClass =
+                                    i === 0
+                                        ? 'rank-1'
+                                        : i === 1
+                                        ? 'rank-2'
+                                        : i === 2
+                                        ? 'rank-3'
+                                        : 'rank-n';
+
+                                return `
+
+                                <div>
+
+                                    <div
+                                        class="
+                                            flex
+                                            items-center
+                                            justify-between
+                                            mb-1
+                                        ">
+
+                                        <div
+                                            class="
+                                                flex
+                                                items-center
+                                                gap-1.5
+                                            "
+                                            style="
+                                                flex:1;
+                                                min-width:0;
+                                                overflow:hidden;
+                                            ">
+
+                                            <span
+                                                class="
+                                                    rank-badge
+                                                    ${rankClass}
+                                                ">
+
+                                                ${i + 1}
+
+                                            </span>
+
+                                            <span
+                                                class="
+                                                    text-xs
+                                                    text-slate-700
+                                                    font-medium
+                                                    cursor-pointer
+                                                    hover:text-blue-600
+                                                    hover:underline
+                                                "
+                                                style="
+                                                    flex:1;
+                                                    min-width:0;
+                                                    overflow:hidden;
+                                                    white-space:nowrap;
+                                                    text-overflow:ellipsis;
+                                                    display:block;
+                                                "
+                                                title="${p.name}"
+                                                onclick="showPartDetail(
+                                                    '${encodeURIComponent(p.name)}'
+                                                )">
+
+                                                ${p.name}
+
+                                            </span>
+
+                                        </div>
+
+                                        <span
+                                            class="
+                                                text-xs
+                                                font-mono
+                                                font-semibold
+                                                ${
+                                                    pSav
+                                                    ? 'text-emerald-600'
+                                                    : 'text-red-600'
+                                                }
+                                            "
+                                            style="
+                                                margin-left:8px;
+                                                white-space:nowrap;
+                                            ">
+
+                                            ${formatIDR(p.saving)}
+
+                                        </span>
+
+                                    </div>
+
+                                    <div class="progress-bar">
+
+                                        <div
+                                            class="
+                                                progress-bar-fill
+                                            "
+                                            style="
+                                                width:${pct}%;
+                                                background:${
+                                                    pSav
+                                                    ? '#10b981'
+                                                    : '#ef4444'
+                                                };
+                                            ">
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                                `;
+
+                            }).join('')}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        `;
+
+    }).join('');
+
+}
+
+// ===== RENDER NG CHARTS =====
+function renderNGCharts() {
+  // HANYA DATA ALTERNATIVE
+  const altData = APP.filteredData.filter(r => r.scenario === 'Alternative');
+
+  // Group by part
+  const byPart = {};
+  altData.forEach(r => {
+    if (!byPart[r.part_name]) {
+      byPart[r.part_name] = {
+        ng_loss: 0,
+        ng_prod: 0,
+        qty_prod: 0,
+        material: r.material,
+        kategori: r.kategori
+      };
+    }
+    byPart[r.part_name].ng_loss += r.ng_loss;
+    byPart[r.part_name].ng_prod += r.ng_prod;
+    byPart[r.part_name].qty_prod += r.qty_prod;
+  });
+
+  const parts = Object.entries(byPart)
+    .map(([name, v]) => ({
+      ...v,
+      part_name: name,
+      ng_rate: v.qty_prod > 0 ? (v.ng_prod / v.qty_prod) * 100 : 0
+    }))
+    .sort((a, b) => b.ng_loss - a.ng_loss)
+    .slice(0, 10);
+
+  // Top 10 NG Part Bar
+  destroyChart('ngTop');
+  APP.charts.ngTop = new ApexCharts(
+    document.getElementById('chart-ng-top'),
+    {
+      series: [{ name: 'NG Loss', data: parts.map(p => Math.round(p.ng_loss)) }],
+      chart: {
+        type: 'bar',
+        height: 320,
+        toolbar: { show: false },
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
+        animations: { speed: 500 }
+      },
+      plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '60%' } },
+      colors: ['#ef4444'],
+      dataLabels: {
+        enabled: true,
+        formatter: v => formatIDR(v),
+        style: { fontSize: '11px', colors: ['#fff'], fontWeight: '600' }
+      },
+      tooltip: { y: { formatter: v => formatIDR(v, true) } },
+      xaxis: {
+        categories: parts.map(p => p.part_name.length > 22 ? p.part_name.substring(0, 20) + '…' : p.part_name),
+        labels: { formatter: v => formatIDR(v), style: { fontSize: '10px', colors: '#94a3b8' } },
+        axisBorder: { show: false },
+        axisTicks: { show: false },
+      },
+      yaxis: { labels: { style: { fontSize: '11px', fontWeight: '600', colors: '#475569' } } },
+      grid: { borderColor: '#f1f5f9', strokeDashArray: 3 },
+    }
+  );
+  APP.charts.ngTop.render();
+
+  // NG Loss by Kategori Donut
+  const byKat = {};
+  altData.forEach(r => {
+    byKat[r.kategori] = (byKat[r.kategori] || 0) + r.ng_loss;
+  });
+  const katLabels = Object.keys(byKat);
+  const katVals = Object.values(byKat).map(v => Math.round(v));
+
+  destroyChart('ngDonut');
+  APP.charts.ngDonut = new ApexCharts(
+    document.getElementById('chart-ng-donut'),
+    {
+      series: katVals,
+      labels: katLabels,
+      chart: {
+        type: 'donut',
+        height: 320,
+        fontFamily: 'Plus Jakarta Sans, sans-serif',
+        animations: { speed: 500 }
+      },
+      colors: CATEGORY_COLORS,
+      dataLabels: {
+        enabled: true,
+        formatter: (v, o) => o.w.globals.labels[o.seriesIndex] + '\n' + v.toFixed(1) + '%'
+      },
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '65%',
+            labels: {
+              show: true,
+              total: {
+                show: true,
+                label: 'Total Loss',
+                formatter: () => formatIDR(katVals.reduce((a, b) => a + b, 0))
+              }
+            }
+          }
+        }
+      },
+      tooltip: { y: { formatter: v => formatIDR(v, true) } },
+      legend: { position: 'bottom', fontSize: '11px' },
+    }
+  );
+  APP.charts.ngDonut.render();
+
+  // NG Rate Gauge
+  const totalNG = altData.reduce((s, r) => s + r.ng_prod, 0);
+  const totalQty = altData.reduce((s, r) => s + r.qty_prod, 0);
+  const ngRate = totalQty > 0 ? (totalNG / totalQty) * 100 : 0;
+
+  destroyChart('ngGauge');
+  APP.charts.ngGauge = new ApexCharts(
+    document.getElementById('chart-ng-gauge'),
+    {
+      series: [+ngRate.toFixed(2)],
+      chart: {
+        type: 'radialBar',
+        height: 280,
+        fontFamily: 'Plus Jakarta Sans, sans-serif'
+      },
+      plotOptions: {
+        radialBar: {
+          startAngle: -135,
+          endAngle: 135,
+          hollow: { size: '60%' },
+          dataLabels: {
+            name: { show: true, fontSize: '13px', color: '#64748b', offsetY: -6 },
+            value: { fontSize: '24px', fontWeight: '700', color: '#1e293b', offsetY: 8, formatter: v => v + '%' },
+          },
+          track: { background: '#f1f5f9', strokeWidth: '97%' },
+        }
+      },
+      fill: {
+        type: 'gradient',
+        gradient: {
+          shade: 'light',
+          type: 'horizontal',
+          gradientToColors: ngRate < 3 ? ['#10b981'] : ngRate < 8 ? ['#f59e0b'] : ['#ef4444'],
+          stops: [0, 100]
+        }
+      },
+      colors: ngRate < 3 ? ['#34d399'] : ngRate < 8 ? ['#fbbf24'] : ['#f87171'],
+      labels: ['NG Rate'],
+    }
+  );
+  APP.charts.ngGauge.render();
+  document.getElementById('ng-rate-label').textContent = ngRate.toFixed(2) + '%';
+
+  // Worst Material
+  const byMat = {};
+  altData.forEach(r => {
+    if (!byMat[r.material]) byMat[r.material] = { ng: 0, loss: 0 };
+    byMat[r.material].ng += r.ng_prod;
+    byMat[r.material].loss += r.ng_loss;
+  });
+  const worstMats = Object.entries(byMat)
+    .map(([mat, v]) => ({ mat, ...v }))
+    .sort((a, b) => b.loss - a.loss)
+    .slice(0, 5);
+
+  const wc = document.getElementById('worst-material-list');
+  if (worstMats.length === 0) {
+    wc.innerHTML = `<div class="empty-state" style="padding: 30px 20px;"><div class="text-sm">Data kosong</div></div>`;
+  } else {
+    wc.innerHTML = worstMats.map((m, i) => `
+      <div class="flex items-center justify-between p-3 rounded-xl"
+           style="background: ${i === 0 ? '#fef2f2' : '#f8fafc'}; border: 1px solid ${i === 0 ? '#fecaca' : '#e2e8f0'};">
+        <div class="flex items-center gap-2">
+          <div class="rank-badge ${['rank-1','rank-2','rank-3','rank-n','rank-n'][i]}">${i + 1}</div>
+          <div>
+            <div class="text-sm font-semibold text-slate-700">${m.mat || '—'}</div>
+            <div class="text-xs text-slate-400">NG: ${formatNumber(m.ng)}</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-bold font-mono text-red-600">${formatIDR(m.loss)}</div>
+          <div class="text-xs text-slate-400">NG Loss</div>
+        </div>
+      </div>
+    `).join('');
+  }
 }
 
 // ===== SAVING MOM =====
@@ -1899,966 +4875,6 @@ function renderActualSavingChart() {
 
 }
 
-// ===== RENDER TOP MATERIAL CHART =====
-function renderTopMaterialChart() {
-
-    const materialSaving = {};
-
-    // =====================================
-    // GROUP PART + KATEGORI
-    // =====================================
-
-    const partKategoriMap = {};
-
-    APP.filteredData.forEach(r => {
-
-        const part =
-            r.part_name || '-';
-
-        const kategori =
-            r.kategori || '-';
-
-        if (!partKategoriMap[part]) {
-
-            partKategoriMap[part] = {};
-
-        }
-
-        if (!partKategoriMap[part][kategori]) {
-
-            partKategoriMap[part][kategori] = {
-
-                standard: [],
-                alternative: []
-
-            };
-
-        }
-
-        if (r.scenario === 'Standard') {
-
-            partKategoriMap[part][kategori]
-                .standard.push(r);
-
-        }
-
-        if (r.scenario === 'Alternative') {
-
-            partKategoriMap[part][kategori]
-                .alternative.push(r);
-
-        }
-
-    });
-
-    // =====================================
-    // HITUNG PER PART + KATEGORI
-    // =====================================
-
-    Object.entries(partKategoriMap)
-        .forEach(([partName, kategoriMap]) => {
-
-        Object.entries(kategoriMap)
-            .forEach(([kategori, data]) => {
-
-            if (!data.standard.length) {
-
-                return;
-
-            }
-
-            // ============================
-            // MATERIAL STANDARD UTAMA
-            // ============================
-
-            const mainMaterialRow =
-                data.standard.find(x => {
-
-                    const name =
-                        (x.material || '')
-                        .toUpperCase();
-
-                    return (
-                        !name.includes('REGRIND') &&
-                        !name.includes('PELETIZING')
-                    );
-
-                });
-
-            if (!mainMaterialRow) {
-
-                return;
-
-            }
-
-            const mainMaterial =
-                mainMaterialRow.material;
-
-            // ============================
-            // COST STANDARD
-            // ============================
-
-            let standardCost = 0;
-
-            data.standard.forEach(r => {
-
-                const qty =
-                    Number(r.qty_g || 0);
-
-                const harga =
-                    Number(r.harga || 0);
-
-                const qtyProd =
-                    Number(r.qty_prod || 0);
-
-                standardCost +=
-                    qty *
-                    harga *
-                    qtyProd /
-                    1000;
-
-            });
-
-            // ============================
-            // COST ALTERNATIVE
-            // ============================
-
-            let alternativeCost = 0;
-
-            data.alternative.forEach(r => {
-
-                const qty =
-                    Number(r.qty_g || 0);
-
-                const harga =
-                    Number(r.harga || 0);
-
-                const qtyProd =
-                    Number(r.qty_prod || 0);
-
-                alternativeCost +=
-                    qty *
-                    harga *
-                    qtyProd /
-                    1000;
-
-            });
-
-            // ============================
-            // SAVING
-            // ============================
-
-            const saving =
-                standardCost -
-                alternativeCost;
-
-            const key =
-                `${kategori}|${mainMaterial}`;
-
-            if (!materialSaving[key]) {
-
-                materialSaving[key] = {
-
-                    kategori,
-
-                    material:
-                        mainMaterial,
-
-                    saving: 0,
-
-                    partCount: 0
-
-                };
-
-            }
-
-            materialSaving[key].saving +=
-                saving;
-
-            materialSaving[key].partCount++;
-
-        });
-
-    });
-
-    // =====================================
-    // SORT
-    // =====================================
-
-    const materials =
-        Object.values(materialSaving)
-        .sort(
-            (a, b) =>
-                b.saving - a.saving
-        );
-
-    const container =
-        document.getElementById(
-            'chart-top-material'
-        );
-
-    if (!materials.length) {
-
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="text-sm">
-                    Data belum tersedia
-                </div>
-            </div>
-        `;
-
-        return;
-
-    }
-
-    const totalSaving =
-        materials.reduce(
-            (sum, m) =>
-                sum + m.saving,
-            0
-        );
-
-    const avgSaving =
-        totalSaving /
-        materials.length;
-
-    const maxAbsSaving =
-        Math.max(
-            ...materials.map(
-                m => Math.abs(m.saving)
-            ),
-            1
-        );
-
-    // =====================================
-    // RENDER
-    // =====================================
-
-    container.innerHTML = `
-
-        <div>
-
-            <div
-                class="
-                    flex
-                    items-start
-                    justify-between
-                    mb-4
-                ">
-
-                <div>
-
-                    <div
-                        class="
-                            font-bold
-                            text-slate-800
-                            text-base
-                        ">
-
-                        All Material - Saving vs Loss
-
-                    </div>
-
-                    <div
-                        class="
-                            text-xs
-                            text-slate-500
-                            mt-1
-                        ">
-
-                        ${materials.length} Material
-
-                    </div>
-
-                </div>
-
-                <div class="text-right">
-
-                    <div
-                        class="
-                            font-mono
-                            font-bold
-                            text-base
-                            ${
-                                totalSaving >= 0
-                                    ? 'text-emerald-600'
-                                    : 'text-red-600'
-                            }
-                        ">
-
-                        ${formatIDR(totalSaving)}
-
-                    </div>
-
-                    <div
-                        class="
-                            text-xs
-                            text-slate-400
-                        ">
-
-                        Avg ${formatIDR(avgSaving)}
-
-                    </div>
-
-                </div>
-
-            </div>
-
-            <div
-                class="
-                    text-xs
-                    font-semibold
-                    text-slate-500
-                    mb-2
-                ">
-
-                Semua Material
-                (${materials.length})
-
-            </div>
-
-            <div
-                class="
-                    cat-part-list
-                    space-y-2
-                ">
-
-                ${materials.map((m, i) => {
-
-                    const pct =
-                        Math.abs(m.saving) /
-                        maxAbsSaving *
-                        100;
-
-                    const isSaving =
-                        m.saving >= 0;
-
-                    const rankClass =
-                        i === 0
-                            ? 'rank-1'
-                            : i === 1
-                            ? 'rank-2'
-                            : i === 2
-                            ? 'rank-3'
-                            : 'rank-n';
-
-                    return `
-
-                    <div>
-
-                        <div
-                            class="
-                                flex
-                                items-center
-                                justify-between
-                                mb-1
-                            ">
-
-                            <div
-                                class="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                "
-                                style="
-                                    flex:1;
-                                    min-width:0;
-                                ">
-
-                                <span
-                                    class="
-                                        rank-badge
-                                        ${rankClass}
-                                    ">
-
-                                    ${i + 1}
-
-                                </span>
-
-                                <span
-                                    class="
-                                        text-xs
-                                        text-slate-700
-                                        font-medium
-                                        cursor-pointer
-                                        hover:text-blue-600
-                                        hover:underline
-                                    "
-                                    onclick="showMaterialDetail(
-                                        '${encodeURIComponent(m.material)}',
-                                        '${encodeURIComponent(m.kategori)}'
-                                    )"
-                                    style="
-                                        flex:1;
-                                        min-width:0;
-                                        overflow:hidden;
-                                        white-space:nowrap;
-                                        text-overflow:ellipsis;
-                                    "
-                                    title="${m.material}">
-
-                                    [${m.kategori}]
-                                    ${m.material}
-
-                                </span>
-
-                            </div>
-
-                            <span
-                                class="
-                                    text-xs
-                                    font-mono
-                                    font-semibold
-                                    ${
-                                        isSaving
-                                            ? 'text-emerald-600'
-                                            : 'text-red-600'
-                                    }
-                                ">
-
-                                ${formatIDR(m.saving)}
-
-                            </span>
-
-                        </div>
-
-                        <div class="progress-bar">
-
-                            <div
-                                class="progress-bar-fill"
-                                style="
-                                    width:${pct}%;
-                                    background:${
-                                        isSaving
-                                            ? '#10b981'
-                                            : '#ef4444'
-                                    };
-                                ">
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                    `;
-
-                }).join('')}
-
-            </div>
-
-        </div>
-
-    `;
-
-}
-
-function showMaterialDetail(
-    encodedMaterial,
-    encodedKategori
-) {
-
-    const material =
-        decodeURIComponent(
-            encodedMaterial
-        );
-
-    const kategori =
-        decodeURIComponent(
-            encodedKategori
-        );
-
-    // =====================================
-    // GROUP PART + KATEGORI
-    // =====================================
-
-    const partKategoriMap = {};
-
-    APP.filteredData.forEach(r => {
-
-        const part =
-            r.part_name || '-';
-
-        if (
-            r.kategori !== kategori
-        ) {
-            return;
-        }
-
-        if (!partKategoriMap[part]) {
-
-            partKategoriMap[part] = {
-
-                standard: [],
-                alternative: []
-
-            };
-
-        }
-
-        if (
-            r.scenario === 'Standard'
-        ) {
-
-            partKategoriMap[part]
-                .standard.push(r);
-
-        }
-
-        if (
-            r.scenario === 'Alternative'
-        ) {
-
-            partKategoriMap[part]
-                .alternative.push(r);
-
-        }
-
-    });
-
-    // =====================================
-    // ANALISA PART
-    // =====================================
-
-    const detailRows = [];
-
-    Object.entries(
-        partKategoriMap
-    ).forEach(([partName, obj]) => {
-
-        if (
-            !obj.standard.length
-        ) {
-            return;
-        }
-
-        const mainMaterialRow =
-            obj.standard.find(x => {
-
-                const name =
-                    (x.material || '')
-                    .toUpperCase();
-
-                return (
-                    !name.includes('REGRIND') &&
-                    !name.includes('PELETIZING')
-                );
-
-            });
-
-        if (!mainMaterialRow) {
-
-            return;
-
-        }
-
-        // hanya material yg sedang dibuka
-        if (
-            mainMaterialRow.material !==
-            material
-        ) {
-
-            return;
-
-        }
-
-        // ==========================
-        // COST STANDARD
-        // ==========================
-
-        let standardCost = 0;
-
-        obj.standard.forEach(r => {
-
-            standardCost +=
-                (
-                    Number(r.qty_g || 0)
-                    *
-                    Number(r.harga || 0)
-                    *
-                    Number(r.qty_prod || 0)
-                ) / 1000;
-
-        });
-
-        // ==========================
-        // COST ALTERNATIVE
-        // ==========================
-
-        let alternativeCost = 0;
-
-        obj.alternative.forEach(r => {
-
-            alternativeCost +=
-                (
-                    Number(r.qty_g || 0)
-                    *
-                    Number(r.harga || 0)
-                    *
-                    Number(r.qty_prod || 0)
-                ) / 1000;
-
-        });
-
-        const saving =
-            standardCost -
-            alternativeCost;
-
-        detailRows.push({
-
-            partName,
-
-            standardCost,
-
-            alternativeCost,
-
-            saving,
-
-            standardMaterials:
-                obj.standard
-                .map(x => x.material),
-
-            alternativeMaterials:
-                obj.alternative
-                .map(x => x.material)
-
-        });
-
-    });
-
-    detailRows.sort(
-        (a, b) =>
-            b.saving - a.saving
-    );
-
-    const totalSaving =
-        detailRows.reduce(
-            (sum, x) =>
-                sum + x.saving,
-            0
-        );
-
-    const bestPart =
-        detailRows[0];
-
-    const worstPart =
-        [...detailRows]
-        .sort(
-            (a, b) =>
-                a.saving - b.saving
-        )[0];
-
-    // =====================================
-    // ALTERNATIVE MATERIAL SUMMARY
-    // =====================================
-
-    const alternativeMap = {};
-
-    detailRows.forEach(r => {
-
-        r.alternativeMaterials
-            .forEach(mat => {
-
-                if (
-                    !alternativeMap[mat]
-                ) {
-
-                    alternativeMap[mat] = {
-
-                        material: mat,
-
-                        saving: 0,
-
-                        count: 0
-
-                    };
-
-                }
-
-                alternativeMap[mat]
-                    .saving +=
-                    r.saving;
-
-                alternativeMap[mat]
-                    .count++;
-
-            });
-
-    });
-
-    const alternatives =
-        Object.values(
-            alternativeMap
-        ).sort(
-            (a, b) =>
-                b.saving - a.saving
-        );
-
-    // =====================================
-    // HTML
-    // =====================================
-
-    let html = '';
-
-    html += `
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
-        <div class="kpi-card">
-
-            <div class="text-xs text-slate-500">
-                Kategori
-            </div>
-
-            <div class="mt-2">
-
-                <span class="badge badge-blue">
-                    ${kategori}
-                </span>
-
-            </div>
-
-        </div>
-
-        <div class="kpi-card">
-
-            <div class="text-xs text-slate-500">
-                Material Standard
-            </div>
-
-            <div class="mt-2 text-sm font-semibold">
-                ${material}
-            </div>
-
-        </div>
-
-        <div class="kpi-card">
-
-            <div class="text-xs text-slate-500">
-                Jumlah Part
-            </div>
-
-            <div class="mt-2 text-2xl font-bold">
-                ${detailRows.length}
-            </div>
-
-        </div>
-
-        <div class="kpi-card ${totalSaving >= 0 ? 'green' : 'red'}">
-
-            <div class="text-xs text-slate-500">
-                Total Saving
-            </div>
-
-            <div class="mt-2 text-2xl font-bold ${totalSaving >= 0 ? 'text-emerald-700' : 'text-red-700'}">
-                ${formatIDR(totalSaving)}
-            </div>
-
-        </div>
-
-    </div>
-
-    `;
-
-    html += `
-
-    <div class="grid md:grid-cols-2 gap-4 mb-6">
-
-        <div class="glass-card p-4">
-
-            <div class="section-header">
-                Saving Terbesar
-            </div>
-
-            <div class="mt-2">
-
-                <div class="font-semibold">
-                    ${bestPart?.partName || '-'}
-                </div>
-
-                <div class="text-emerald-600 font-bold mt-1">
-                    ${bestPart ? formatIDR(bestPart.saving) : '-'}
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="glass-card p-4">
-
-            <div class="section-header">
-                Kerugian Terbesar
-            </div>
-
-            <div class="mt-2">
-
-                <div class="font-semibold">
-                    ${worstPart?.partName || '-'}
-                </div>
-
-                <div class="text-red-600 font-bold mt-1">
-                    ${worstPart ? formatIDR(worstPart.saving) : '-'}
-                </div>
-
-            </div>
-
-        </div>
-
-    </div>
-
-    `;
-
-    html += `
-
-    <div class="glass-card p-4 mb-6">
-
-        <div class="section-header">
-            Part Impact Analysis
-        </div>
-
-        <table class="data-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>Part</th>
-                    <th>Standard</th>
-                    <th>Alternative</th>
-                    <th>Saving</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                ${detailRows.map(r => `
-
-                <tr>
-
-                    <td>
-
-                        <span
-                            class="cursor-pointer hover:text-blue-600 hover:underline"
-                            onclick="showPartDetail('${encodeURIComponent(r.partName)}')">
-
-                            ${r.partName}
-
-                        </span>
-
-                    </td>
-
-                    <td>
-
-                        ${r.standardMaterials.join('<br>')}
-
-                    </td>
-
-                    <td>
-
-                        ${r.alternativeMaterials.join('<br>')}
-
-                    </td>
-
-                    <td class="text-right">
-
-                        <span class="badge ${r.saving >= 0 ? 'badge-green' : 'badge-red'}">
-
-                            ${formatIDR(r.saving)}
-
-                        </span>
-
-                    </td>
-
-                </tr>
-
-                `).join('')}
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    `;
-
-    html += `
-
-    <div class="glass-card p-4">
-
-        <div class="section-header">
-
-            Alternative Material Summary
-
-        </div>
-
-        <table class="data-table">
-
-            <thead>
-
-                <tr>
-
-                    <th>Alternative Material</th>
-                    <th>Part</th>
-                    <th>Total Impact</th>
-
-                </tr>
-
-            </thead>
-
-            <tbody>
-
-                ${alternatives.map(a => `
-
-                <tr>
-
-                    <td>
-                        ${a.material}
-                    </td>
-
-                    <td>
-                        ${a.count}
-                    </td>
-
-                    <td class="text-right">
-                        ${formatIDR(a.saving)}
-                    </td>
-
-                </tr>
-
-                `).join('')}
-
-            </tbody>
-
-        </table>
-
-    </div>
-
-    `;
-
-    document.getElementById(
-        'part-detail-title'
-    ).textContent =
-        material;
-
-    document.getElementById(
-        'part-detail-subtitle'
-    ).textContent =
-        `Kategori ${kategori}`;
-
-    document.getElementById(
-        'part-detail-body'
-    ).innerHTML =
-        html;
-
-    document.getElementById(
-        'part-detail-modal'
-    ).classList.remove(
-        'hidden'
-    );
-
-}
-
 // ===== RENDER MONTHLY CHART =====
 function renderMonthlySavingChart() {
 
@@ -3066,865 +5082,6 @@ function renderMonthlySavingChart() {
             }
         ]
     });
-}
-
-// ===== RENDER CATEGORY CARDS =====
-function renderCategoryCards() {
-  // Group by kategori
-  const byKat = {};
-  APP.filteredData.forEach(r => {
-    if (!byKat[r.kategori]) byKat[r.kategori] = { parts: new Set(), std: 0, alt: 0, rows: [] };
-    byKat[r.kategori].parts.add(r.part_name);
-    if (r.scenario === 'Standard') byKat[r.kategori].std += r.total_cost;
-    if (r.scenario === 'Alternative') byKat[r.kategori].alt += r.total_cost;
-    byKat[r.kategori].rows.push(r);
-  });
-
-  const container = document.getElementById('category-cards');
-
-  if (Object.keys(byKat).length === 0) {
-    container.innerHTML = `<div class="col-span-3 empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><div class="text-base font-semibold">Data belum tersedia</div><div class="text-sm mt-1">Upload file Excel terlebih dahulu</div></div>`;
-    return;
-  }
-
-  // Sort categories by abs, pp, ppgf
-  const priorityOrder = {
-    ABS: 1,
-    PP: 2,
-    PPGF: 3
-  };
-
-  const sortedKat =
-    Object.entries(byKat)
-    .sort((a, b) => {
-
-      const orderA =
-        priorityOrder[a[0]] || 999;
-
-      const orderB =
-        priorityOrder[b[0]] || 999;
-
-      if (orderA !== orderB)
-        return orderA - orderB;
-
-      const savA =
-        a[1].std - a[1].alt;
-
-      const savB =
-        b[1].std - b[1].alt;
-
-      return savB - savA;
-
-    });
-
-  container.innerHTML = sortedKat.map(([kat, val], idx) => {
-    const saving = val.std - val.alt;
-    const partCount = val.parts.size;
-    const avgSaving = partCount > 0 ? saving / partCount : 0;
-    const isSav = saving >= 0;
-    const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
-
-    // All parts sorted by saving descending (highest saving first, loss at bottom)
-    const partSaving = {};
-    val.rows.forEach(r => {
-      if (!partSaving[r.part_name]) partSaving[r.part_name] = { std: 0, alt: 0 };
-      if (r.scenario === 'Standard') partSaving[r.part_name].std += r.total_cost;
-      if (r.scenario === 'Alternative') partSaving[r.part_name].alt += r.total_cost;
-    });
-    const allParts = Object.entries(partSaving)
-      .map(([name, v]) => ({ name, saving: v.std - v.alt }))
-      .sort((a, b) => b.saving - a.saving);
-
-    const maxAbsSaving = Math.max(...allParts.map(p => Math.abs(p.saving)), 1);
-
-    return `
-      <div class="category-card fade-in fade-in-delay-${(idx % 4) + 1}">
-        <div class="h-1.5" style="background: linear-gradient(90deg, ${color}, ${color}88);"></div>
-        <div class="p-4">
-          <div class="flex items-start justify-between mb-3">
-            <div>
-              <div class="font-bold text-slate-800 text-base">${kat || 'Unknown'}</div>
-              <div class="text-xs text-slate-500 mt-0.5">${partCount} Part</div>
-            </div>
-            <div class="text-right">
-              <div class="font-mono font-bold text-base ${isSav ? 'text-emerald-600' : 'text-red-600'}">${formatIDR(saving)}</div>
-              <div class="text-xs text-slate-400">Avg ${formatIDR(avgSaving)}</div>
-            </div>
-          </div>
-
-          <div class="mb-2">
-            <div class="text-xs font-semibold text-slate-500 mb-2">Semua Part (${allParts.length})</div>
-            <div class="cat-part-list space-y-2">
-              ${allParts.map((p, i) => {
-                const pct = Math.abs(p.saving) / maxAbsSaving * 100;
-                const pSav = p.saving >= 0;
-                const rankClass = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n';
-                return `
-                  <div>
-                    <div class="flex items-center justify-between mb-1">
-                      <div
-                        class="flex items-center gap-1.5"
-                        style="
-                          flex:1;
-                          min-width:0;
-                          overflow:hidden;
-                        ">
-
-                        <span class="rank-badge ${rankClass}">
-                          ${i+1}
-                        </span>
-
-                        <span
-                          class="
-                            text-xs
-                            text-slate-700
-                            font-medium
-                            cursor-pointer
-                            hover:text-blue-600
-                            hover:underline
-                          "
-                          style="
-                            flex:1;
-                            min-width:0;
-                            overflow:hidden;
-                            white-space:nowrap;
-                            text-overflow:ellipsis;
-                            display:block;
-                          "
-                          title="${p.name}"
-                          onclick="showPartDetailKategori(
-                              '${encodeURIComponent(p.name)}',
-                              '${encodeURIComponent(kat)}'
-                          )">
-
-                          ${p.name}
-
-                        </span>
-
-                      </div>
-                      <span class="text-xs font-mono font-semibold ${pSav ? 'text-emerald-600' : 'text-red-600'}" style="margin-left:8px; white-space:nowrap;">${formatIDR(p.saving)}</span>
-                    </div>
-                    <div class="progress-bar">
-                      <div class="progress-bar-fill" style="width:${pct}%; background: ${pSav ? '#10b981' : '#ef4444'};"></div>
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-function showPartDetailKategori(
-    encodedPartName,
-    encodedKategori
-) {
-
-    const partName =
-        decodeURIComponent(
-            encodedPartName
-        );
-
-    const kategori =
-        decodeURIComponent(
-            encodedKategori
-        );
-
-    const rows =
-        APP.filteredData.filter(
-            x =>
-                x.part_name === partName &&
-                (x.kategori || '-') === kategori
-        );
-
-    if (!rows.length)
-        return;
-
-    // =====================================
-    // SUMMARY
-    // =====================================
-
-    const totalStd =
-        rows
-        .filter(
-            r => r.scenario === 'Standard'
-        )
-        .reduce(
-            (sum, r) =>
-                sum + (r.total_cost || 0),
-            0
-        );
-
-    const totalAlt =
-        rows
-        .filter(
-            r => r.scenario === 'Alternative'
-        )
-        .reduce(
-            (sum, r) =>
-                sum + (r.total_cost || 0),
-            0
-        );
-
-    const saving =
-        totalStd - totalAlt;
-
-    // Standard dulu
-    rows.sort((a, b) => {
-
-        if (
-            a.scenario === b.scenario
-        )
-            return 0;
-
-        return a.scenario === 'Standard'
-            ? -1
-            : 1;
-
-    });
-
-    let html = '';
-
-    // =====================================
-    // KPI
-    // =====================================
-
-    html += `
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-
-        <div class="kpi-card">
-
-            <div class="text-xs text-slate-500">
-                Kategori Material
-            </div>
-
-            <div class="mt-2">
-
-                <span class="
-                    badge
-                    badge-blue
-                    text-sm
-                ">
-
-                    ${kategori}
-
-                </span>
-
-            </div>
-
-        </div>
-
-        <div class="kpi-card blue">
-
-            <div class="text-xs text-slate-500">
-                Total Standard
-            </div>
-
-            <div class="mt-2 font-bold text-2xl text-blue-700">
-
-                ${formatIDR(totalStd)}
-
-            </div>
-
-        </div>
-
-        <div class="kpi-card cyan">
-
-            <div class="text-xs text-slate-500">
-                Total Alternative
-            </div>
-
-            <div class="mt-2 font-bold text-2xl text-cyan-700">
-
-                ${formatIDR(totalAlt)}
-
-            </div>
-
-        </div>
-
-        <div class="kpi-card ${
-            saving >= 0
-                ? 'green'
-                : 'red'
-        }">
-
-            <div class="text-xs text-slate-500">
-                Total Saving
-            </div>
-
-            <div
-                class="
-                    mt-2
-                    font-bold
-                    text-2xl
-                    ${
-                        saving >= 0
-                            ? 'text-emerald-700'
-                            : 'text-red-700'
-                    }
-                ">
-
-                ${formatIDR(saving)}
-
-            </div>
-
-        </div>
-
-    </div>
-
-    `;
-
-    // =====================================
-    // FORMULA
-    // =====================================
-
-    html += `
-
-    <div class="glass-card p-3 mb-6">
-
-        <div class="section-header">
-
-            Formula Perhitungan
-
-        </div>
-
-        <div
-            class="
-                text-sm
-                text-slate-700
-            ">
-
-            Total Cost =
-            (Qty_g / 1000)
-            × Harga
-            × OK_Prod
-
-        </div>
-
-    </div>
-
-    `;
-
-    // =====================================
-    // DETAIL SOURCE DATA
-    // =====================================
-
-    html += `
-
-    <div class="glass-card p-4">
-
-        <div class="section-header">
-
-            Detail Source Data
-
-        </div>
-
-        <div class="overflow-auto">
-
-            <table class="data-table">
-
-                <thead>
-
-                    <tr>
-
-                        <th>No</th>
-                        <th>Scenario</th>
-                        <th>Material</th>
-                        <th>Component</th>
-                        <th>Qty</th>
-                        <th>Harga</th>
-                        <th>OK Prod</th>
-                        <th>Total Cost</th>
-
-                    </tr>
-
-                </thead>
-
-                <tbody>
-
-    `;
-
-    rows.forEach((r, idx) => {
-
-        html += `
-
-        <tr>
-
-            <td class="text-center">
-
-                ${idx + 1}
-
-            </td>
-
-            <td>
-
-                <span class="
-                    badge
-                    ${
-                        r.scenario === 'Standard'
-                            ? 'badge-blue'
-                            : 'badge-yellow'
-                    }
-                ">
-
-                    ${r.scenario}
-
-                </span>
-
-            </td>
-
-            <td>
-
-                ${r.material}
-
-            </td>
-
-            <td>
-
-                ${r.component}
-
-            </td>
-
-            <td class="text-right">
-
-                ${formatNumber(
-                    r.qty_g
-                )}
-
-            </td>
-
-            <td class="text-right">
-
-                ${formatIDR(
-                    r.harga
-                )}
-
-            </td>
-
-            <td class="text-right">
-
-                ${formatNumber(
-                    r.ok_prod
-                )}
-
-            </td>
-
-            <td
-                class="
-                    text-right
-                    font-semibold
-                ">
-
-                ${formatIDR(
-                    r.total_cost
-                )}
-
-            </td>
-
-        </tr>
-
-        `;
-
-    });
-
-    html += `
-
-                </tbody>
-
-            </table>
-
-        </div>
-
-    </div>
-
-    `;
-
-    document.getElementById(
-        'part-detail-title'
-    ).textContent =
-        partName;
-
-    document.getElementById(
-        'part-detail-subtitle'
-    ).textContent =
-        `Kategori ${kategori} • ${rows.length} Record`;
-
-    document.getElementById(
-        'part-detail-body'
-    ).innerHTML =
-        html;
-
-    document.getElementById(
-        'part-detail-modal'
-    ).classList.remove(
-        'hidden'
-    );
-
-}
-
-// ===== RENDER HOPPER CARDS =====
-function renderHopperCards() {
-  // Group by hopper
-  const byHopper = {};
-
-  APP.filteredData.forEach(r => {
-    const hopper = r.hopper || 'Unknown';
-
-    if (!byHopper[hopper]) {
-      byHopper[hopper] = {
-        parts: new Set(),
-        std: 0,
-        alt: 0,
-        rows: []
-      };
-    }
-
-    byHopper[hopper].parts.add(r.part_name);
-
-    if (r.scenario === 'Standard')
-      byHopper[hopper].std += r.total_cost;
-
-    if (r.scenario === 'Alternative')
-      byHopper[hopper].alt += r.total_cost;
-
-    byHopper[hopper].rows.push(r);
-  });
-
-  const container = document.getElementById('hopper-cards');
-
-  if (Object.keys(byHopper).length === 0) {
-    container.innerHTML = `<div class="col-span-3 empty-state"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg><div class="text-base font-semibold">Data belum tersedia</div><div class="text-sm mt-1">Upload file Excel terlebih dahulu</div></div>`;
-    return;
-  }
-
-    const sortedHopper = Object.entries(byHopper)
-    .sort((a, b) =>
-        (b[1].std - b[1].alt) -
-        (a[1].std - a[1].alt)
-    );
-
-  container.innerHTML = sortedHopper.map(([hopper, val], idx) => {
-
-    const saving = val.std - val.alt;
-    const partCount = val.parts.size;
-    const avgSaving = partCount > 0 ? saving / partCount : 0;
-    const isSav = saving >= 0;
-    const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
-
-    const partSaving = {};
-
-    val.rows.forEach(r => {
-      if (!partSaving[r.part_name]) {
-        partSaving[r.part_name] = {
-          std: 0,
-          alt: 0
-        };
-      }
-
-      if (r.scenario === 'Standard')
-        partSaving[r.part_name].std += r.total_cost;
-
-      if (r.scenario === 'Alternative')
-        partSaving[r.part_name].alt += r.total_cost;
-    });
-
-    const allParts = Object.entries(partSaving)
-      .map(([name, v]) => ({
-        name,
-        saving: v.std - v.alt
-      }))
-      .sort((a, b) => b.saving - a.saving);
-
-    const maxAbsSaving =
-      Math.max(...allParts.map(p => Math.abs(p.saving)), 1);
-
-    return `
-      <div class="category-card fade-in fade-in-delay-${(idx % 4) + 1}">
-        <div class="h-1.5" style="background: linear-gradient(90deg, ${color}, ${color}88);"></div>
-
-        <div class="p-4">
-
-          <div class="flex items-start justify-between mb-3">
-            <div>
-              <div class="font-bold text-slate-800 text-base">${hopper}</div>
-              <div class="text-xs text-slate-500 mt-0.5">${partCount} Part</div>
-            </div>
-
-            <div class="text-right">
-              <div class="font-mono font-bold text-base ${isSav ? 'text-emerald-600' : 'text-red-600'}">
-                ${formatIDR(saving)}
-              </div>
-              <div class="text-xs text-slate-400">
-                Avg ${formatIDR(avgSaving)}
-              </div>
-            </div>
-          </div>
-
-          <div class="mb-2">
-            <div class="text-xs font-semibold text-slate-500 mb-2">
-              Semua Part (${allParts.length})
-            </div>
-
-            <div class="cat-part-list space-y-2">
-
-              ${allParts.map((p, i) => {
-
-                const pct =
-                  Math.abs(p.saving) / maxAbsSaving * 100;
-
-                const pSav =
-                  p.saving >= 0;
-
-                const rankClass =
-                  i === 0 ? 'rank-1' :
-                  i === 1 ? 'rank-2' :
-                  i === 2 ? 'rank-3' :
-                  'rank-n';
-
-                return `
-                  <div>
-
-                    <div class="flex items-center justify-between mb-1">
-
-                      <div class="flex items-center gap-1.5"
-                           style="flex:1;min-width:0;overflow:hidden;">
-
-                        <span class="rank-badge ${rankClass}">
-                          ${i + 1}
-                        </span>
-
-                        <span
-                          class="text-xs text-slate-700 font-medium cursor-pointer hover:text-blue-600 hover:underline"
-                          style="flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;display:block;"
-                          title="${p.name}"
-                          onclick="showPartDetailKategori(
-                            '${encodeURIComponent(p.name)}',
-                            '${encodeURIComponent(hopper)}'
-                          )">
-
-                          ${p.name}
-
-                        </span>
-
-                      </div>
-
-                      <span class="text-xs font-mono font-semibold ${pSav ? 'text-emerald-600' : 'text-red-600'}"
-                            style="margin-left:8px;white-space:nowrap;">
-                        ${formatIDR(p.saving)}
-                      </span>
-
-                    </div>
-
-                    <div class="progress-bar">
-                      <div class="progress-bar-fill"
-                           style="width:${pct}%; background:${pSav ? '#10b981' : '#ef4444'};">
-                      </div>
-                    </div>
-
-                  </div>
-                `;
-
-              }).join('')}
-
-            </div>
-          </div>
-
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// ===== RENDER NG CHARTS =====
-function renderNGCharts() {
-  // HANYA DATA ALTERNATIVE
-  const altData = APP.filteredData.filter(r => r.scenario === 'Alternative');
-
-  // Group by part
-  const byPart = {};
-  altData.forEach(r => {
-    if (!byPart[r.part_name]) {
-      byPart[r.part_name] = {
-        ng_loss: 0,
-        ng_prod: 0,
-        qty_prod: 0,
-        material: r.material,
-        kategori: r.kategori
-      };
-    }
-    byPart[r.part_name].ng_loss += r.ng_loss;
-    byPart[r.part_name].ng_prod += r.ng_prod;
-    byPart[r.part_name].qty_prod += r.qty_prod;
-  });
-
-  const parts = Object.entries(byPart)
-    .map(([name, v]) => ({
-      ...v,
-      part_name: name,
-      ng_rate: v.qty_prod > 0 ? (v.ng_prod / v.qty_prod) * 100 : 0
-    }))
-    .sort((a, b) => b.ng_loss - a.ng_loss)
-    .slice(0, 10);
-
-  // Top 10 NG Part Bar
-  destroyChart('ngTop');
-  APP.charts.ngTop = new ApexCharts(
-    document.getElementById('chart-ng-top'),
-    {
-      series: [{ name: 'NG Loss', data: parts.map(p => Math.round(p.ng_loss)) }],
-      chart: {
-        type: 'bar',
-        height: 320,
-        toolbar: { show: false },
-        fontFamily: 'Plus Jakarta Sans, sans-serif',
-        animations: { speed: 500 }
-      },
-      plotOptions: { bar: { horizontal: true, borderRadius: 6, barHeight: '60%' } },
-      colors: ['#ef4444'],
-      dataLabels: {
-        enabled: true,
-        formatter: v => formatIDR(v),
-        style: { fontSize: '11px', colors: ['#fff'], fontWeight: '600' }
-      },
-      tooltip: { y: { formatter: v => formatIDR(v, true) } },
-      xaxis: {
-        categories: parts.map(p => p.part_name.length > 22 ? p.part_name.substring(0, 20) + '…' : p.part_name),
-        labels: { formatter: v => formatIDR(v), style: { fontSize: '10px', colors: '#94a3b8' } },
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-      },
-      yaxis: { labels: { style: { fontSize: '11px', fontWeight: '600', colors: '#475569' } } },
-      grid: { borderColor: '#f1f5f9', strokeDashArray: 3 },
-    }
-  );
-  APP.charts.ngTop.render();
-
-  // NG Loss by Kategori Donut
-  const byKat = {};
-  altData.forEach(r => {
-    byKat[r.kategori] = (byKat[r.kategori] || 0) + r.ng_loss;
-  });
-  const katLabels = Object.keys(byKat);
-  const katVals = Object.values(byKat).map(v => Math.round(v));
-
-  destroyChart('ngDonut');
-  APP.charts.ngDonut = new ApexCharts(
-    document.getElementById('chart-ng-donut'),
-    {
-      series: katVals,
-      labels: katLabels,
-      chart: {
-        type: 'donut',
-        height: 320,
-        fontFamily: 'Plus Jakarta Sans, sans-serif',
-        animations: { speed: 500 }
-      },
-      colors: CATEGORY_COLORS,
-      dataLabels: {
-        enabled: true,
-        formatter: (v, o) => o.w.globals.labels[o.seriesIndex] + '\n' + v.toFixed(1) + '%'
-      },
-      plotOptions: {
-        pie: {
-          donut: {
-            size: '65%',
-            labels: {
-              show: true,
-              total: {
-                show: true,
-                label: 'Total Loss',
-                formatter: () => formatIDR(katVals.reduce((a, b) => a + b, 0))
-              }
-            }
-          }
-        }
-      },
-      tooltip: { y: { formatter: v => formatIDR(v, true) } },
-      legend: { position: 'bottom', fontSize: '11px' },
-    }
-  );
-  APP.charts.ngDonut.render();
-
-  // NG Rate Gauge
-  const totalNG = altData.reduce((s, r) => s + r.ng_prod, 0);
-  const totalQty = altData.reduce((s, r) => s + r.qty_prod, 0);
-  const ngRate = totalQty > 0 ? (totalNG / totalQty) * 100 : 0;
-
-  destroyChart('ngGauge');
-  APP.charts.ngGauge = new ApexCharts(
-    document.getElementById('chart-ng-gauge'),
-    {
-      series: [+ngRate.toFixed(2)],
-      chart: {
-        type: 'radialBar',
-        height: 280,
-        fontFamily: 'Plus Jakarta Sans, sans-serif'
-      },
-      plotOptions: {
-        radialBar: {
-          startAngle: -135,
-          endAngle: 135,
-          hollow: { size: '60%' },
-          dataLabels: {
-            name: { show: true, fontSize: '13px', color: '#64748b', offsetY: -6 },
-            value: { fontSize: '24px', fontWeight: '700', color: '#1e293b', offsetY: 8, formatter: v => v + '%' },
-          },
-          track: { background: '#f1f5f9', strokeWidth: '97%' },
-        }
-      },
-      fill: {
-        type: 'gradient',
-        gradient: {
-          shade: 'light',
-          type: 'horizontal',
-          gradientToColors: ngRate < 3 ? ['#10b981'] : ngRate < 8 ? ['#f59e0b'] : ['#ef4444'],
-          stops: [0, 100]
-        }
-      },
-      colors: ngRate < 3 ? ['#34d399'] : ngRate < 8 ? ['#fbbf24'] : ['#f87171'],
-      labels: ['NG Rate'],
-    }
-  );
-  APP.charts.ngGauge.render();
-  document.getElementById('ng-rate-label').textContent = ngRate.toFixed(2) + '%';
-
-  // Worst Material
-  const byMat = {};
-  altData.forEach(r => {
-    if (!byMat[r.material]) byMat[r.material] = { ng: 0, loss: 0 };
-    byMat[r.material].ng += r.ng_prod;
-    byMat[r.material].loss += r.ng_loss;
-  });
-  const worstMats = Object.entries(byMat)
-    .map(([mat, v]) => ({ mat, ...v }))
-    .sort((a, b) => b.loss - a.loss)
-    .slice(0, 5);
-
-  const wc = document.getElementById('worst-material-list');
-  if (worstMats.length === 0) {
-    wc.innerHTML = `<div class="empty-state" style="padding: 30px 20px;"><div class="text-sm">Data kosong</div></div>`;
-  } else {
-    wc.innerHTML = worstMats.map((m, i) => `
-      <div class="flex items-center justify-between p-3 rounded-xl"
-           style="background: ${i === 0 ? '#fef2f2' : '#f8fafc'}; border: 1px solid ${i === 0 ? '#fecaca' : '#e2e8f0'};">
-        <div class="flex items-center gap-2">
-          <div class="rank-badge ${['rank-1','rank-2','rank-3','rank-n','rank-n'][i]}">${i + 1}</div>
-          <div>
-            <div class="text-sm font-semibold text-slate-700">${m.mat || '—'}</div>
-            <div class="text-xs text-slate-400">NG: ${formatNumber(m.ng)}</div>
-          </div>
-        </div>
-        <div class="text-right">
-          <div class="text-sm font-bold font-mono text-red-600">${formatIDR(m.loss)}</div>
-          <div class="text-xs text-slate-400">NG Loss</div>
-        </div>
-      </div>
-    `).join('');
-  }
 }
 
 // ===== RENDER NG TABLE =====
