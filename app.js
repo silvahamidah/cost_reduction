@@ -380,7 +380,7 @@ function calculateOverview() {
 
     // Saving karena harga AHM
     const savingAhm =
-        totalStd - totalAhm;
+        totalAhm - totalStd;
 
     // Saving karena cost reduction
     const savingAlt =
@@ -396,10 +396,15 @@ function calculateOverview() {
             : 0;
 
     const totalNG =
-        APP.filteredData.reduce(
-            (s, r) => s + r.ng_loss,
-            0
-        );
+        APP.filteredData
+            .filter(
+                r => r.scenario === 'Alternative'
+            )
+            .reduce(
+                (s, r) =>
+                    s + Number(r.ng_loss || 0),
+                0
+            );
 
     return {
 
@@ -442,34 +447,35 @@ function renderCards() {
     const kpis = [
 
         {
-            title: 'Total Cost Standard',
+            title: 'Total Cost Material Standard',
             val: formatIDR(totalStd),
             color: 'blue',
             icon: 'fas fa-circle-dollar-to-slot',
             iconColor: '#1d4ed8',
             bg: '#eff6ff',
-            sub: 'Material Original - Harga Actual'
+            // sub: 'Material Original - Harga Actual'
         },
 
         {
-            title: 'Total Cost AHM',
-            val: formatIDR(totalAhm),
-            color: 'blue',
-            icon: 'fas fa-handshake',
-            iconColor: '#4f46e5',
-            bg: '#eef2ff',
-            sub: 'Material Original - Harga AHM'
-        },
-
-        {
-            title: 'Total Cost Alternative',
+            title: 'Total Cost Material Alternative',
             val: formatIDR(totalAlt),
             color: 'cyan',
             icon: 'fas fa-arrows-rotate',
             iconColor: '#0891b2',
             bg: '#ecfeff',
-            sub: 'Material Cost Reduction'
+            // sub: 'Material Cost Reduction'
         },
+
+        {
+            title: 'Total AHM Spending to Aski',
+            val: formatIDR(totalAhm),
+            color: 'blue',
+            icon: 'fas fa-handshake',
+            iconColor: '#4f46e5',
+            bg: '#eef2ff',
+            // sub: 'Material Original - Harga AHM'
+        },
+
 
         {
             title: 'Saving Harga AHM',
@@ -484,7 +490,7 @@ function renderCards() {
             bg: savingAhm >= 0
                 ? '#f0fdf4'
                 : '#fef2f2',
-            sub: 'Standard → AHM'
+            sub: 'AHM → Standard'
         },
 
         {
@@ -550,72 +556,107 @@ function renderCards() {
             'kpi-container'
         );
 
-    container.innerHTML =
-        kpis.map((k, i) => `
+        container.innerHTML =
+            kpis.map((k, i) => {
 
-        <div class="kpi-card ${k.color} fade-in fade-in-delay-${(i % 5) + 1}">
+                const hasSub =
+                    !!k.sub;
 
-            <div class="flex items-start justify-between">
+                return `
 
-                <div
-                    class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style="background:${k.bg};">
+                <div class="kpi-card ${k.color} fade-in fade-in-delay-${(i % 5) + 1}">
 
-                    <i
-                        class="${k.icon}"
-                        style="
-                            color:${k.iconColor};
-                            font-size:16px;
+                    <div class="
+                        flex
+                        justify-between
+                        ${hasSub ? 'items-start' : 'items-center'}
+                        h-full
+                    ">
+
+                        <div
+                            class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style="background:${k.bg};">
+
+                            <i
+                                class="${k.icon}"
+                                style="
+                                    color:${k.iconColor};
+                                    font-size:16px;
+                                ">
+                            </i>
+
+                        </div>
+
+                        <div class="
+                            text-right
+                            flex-1
+                            ml-2
+                            ${hasSub ? '' : 'self-center'}
                         ">
-                    </i>
+
+                            <div
+                                class="
+                                    font-semibold
+                                    text-slate-500
+                                    mb-0.5
+                                "
+                                style="
+                                    font-size:${
+                                        hasSub
+                                            ? '12px'
+                                            : '13px'
+                                    };
+                                ">
+
+                                ${k.title}
+
+                            </div>
+
+                            <div
+                                class="
+                                    font-mono
+                                    font-bold
+                                    text-slate-800
+                                    leading-tight
+                                "
+                                style="
+                                    font-size:${
+                                        hasSub
+                                            ? '15px'
+                                            : '18px'
+                                    };
+                                ">
+
+                                ${k.val}
+
+                            </div>
+
+                            ${
+                                hasSub
+                                ? `
+                                <div
+                                    class="
+                                        text-xs
+                                        text-slate-400
+                                        mt-0.5
+                                    ">
+
+                                    ${k.sub}
+
+                                </div>
+                                `
+                                : ''
+                            }
+
+                        </div>
+
+                    </div>
 
                 </div>
 
-                <div class="text-right flex-1 ml-2">
+                `;
 
-                    <div
-                        class="
-                            text-xs
-                            font-semibold
-                            text-slate-500
-                            mb-0.5
-                        ">
-
-                        ${k.title}
-
-                    </div>
-
-                    <div
-                        class="
-                            font-mono
-                            font-bold
-                            text-slate-800
-                            leading-tight
-                        "
-                        style="font-size:15px;">
-
-                        ${k.val}
-
-                    </div>
-
-                    <div
-                        class="
-                            text-xs
-                            text-slate-400
-                            mt-0.5
-                        ">
-
-                        ${k.sub}
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    `).join('');
+            }).join('');
 
 }
 
@@ -3274,11 +3315,28 @@ function showPartDetailKategori(
             encodedKategori
         );
 
+    const isAhmMode =
+        APP.compareMode === 'ahm';
+
+    const baseScenario =
+        isAhmMode
+            ? 'AHM Beli'
+            : 'Standard';
+
+    const baseLabel =
+        isAhmMode
+            ? 'AHM'
+            : 'Standard';
+
     const rows =
         APP.filteredData.filter(
             x =>
                 x.part_name === partName &&
-                (x.kategori || '-') === kategori
+                (x.kategori || '-') === kategori &&
+                (
+                    x.scenario === baseScenario ||
+                    x.scenario === 'Alternative'
+                )
         );
 
     if (!rows.length)
@@ -3288,10 +3346,10 @@ function showPartDetailKategori(
     // SUMMARY
     // =====================================
 
-    const totalStd =
+    const totalBase =
         rows
         .filter(
-            r => r.scenario === 'Standard'
+            r => r.scenario === baseScenario
         )
         .reduce(
             (sum, r) =>
@@ -3311,19 +3369,31 @@ function showPartDetailKategori(
         );
 
     const saving =
-        totalStd - totalAlt;
+        totalBase - totalAlt;
 
-    // Standard dulu
+    // Base Scenario dulu
+
     rows.sort((a, b) => {
 
         if (
             a.scenario === b.scenario
-        )
+        ) {
             return 0;
+        }
 
-        return a.scenario === 'Standard'
-            ? -1
-            : 1;
+        if (
+            a.scenario === baseScenario
+        ) {
+            return -1;
+        }
+
+        if (
+            b.scenario === baseScenario
+        ) {
+            return 1;
+        }
+
+        return 0;
 
     });
 
@@ -3362,12 +3432,12 @@ function showPartDetailKategori(
         <div class="kpi-card blue">
 
             <div class="text-xs text-slate-500">
-                Total Standard
+                Total ${baseLabel}
             </div>
 
             <div class="mt-2 font-bold text-2xl text-blue-700">
 
-                ${formatIDR(totalStd)}
+                ${formatIDR(totalBase)}
 
             </div>
 
@@ -3506,9 +3576,9 @@ function showPartDetailKategori(
                 <span class="
                     badge
                     ${
-                        r.scenario === 'Standard'
+                        r.scenario === baseScenario
                             ? 'badge-blue'
-                            : 'badge-yellow'
+                            : 'badge-green'
                     }
                 ">
 
@@ -3592,7 +3662,7 @@ function showPartDetailKategori(
     document.getElementById(
         'part-detail-subtitle'
     ).textContent =
-        `Kategori ${kategori} • ${rows.length} Record`;
+        `${baseLabel} vs Alternative • Kategori ${kategori} • ${rows.length} Record`;
 
     document.getElementById(
         'part-detail-body'
